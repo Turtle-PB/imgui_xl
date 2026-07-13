@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"/>
+    <meta name="description" content="Pixel OS Model Demo — Interactive phone simulator showcasing Pixel OS capabilities. Part of imgui_xl examples.">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>Pixel OS Model Demo — imgui_xl</title>
+    <!--
+      Pixel OS Model Demo
+      Part of imgui_xl (Dear ImGui XL fork) — https://github.com/Turtle-PB/imgui_xl
+      (c) 2024 Paul Adcock / OwlLogics. MIT License.
+      Interactive Pixel phone simulator showcasing OS capabilities.
+    -->
+    <style>
+      /* ===== MENU BAR ===== */
+      * { margin:0; padding:0; box-sizing:border-box; -webkit-user-select:none; user-select:none; }
+      body { display:flex; flex-direction:column; height:100vh; background:#1a1a2e; font-family:'Google Sans','Segoe UI',system-ui,sans-serif; overflow:hidden; }
+
+      .menu-bar { display:flex; align-items:center; height:32px; background:#252535; border-bottom:1px solid #3a3a4a; padding:0 8px; flex-shrink:0; z-index:1000; }
+      .menu-bar-brand { display:flex; align-items:center; gap:6px; font-size:13px; color:#8ab4f8; font-weight:600; margin-right:16px; padding-right:16px; border-right:1px solid #3a3a4a; }
+      .menu-item { position:relative; }
+      .menu-btn { background:transparent; border:none; color:#c0c0d0; font-size:12px; padding:5px 12px; cursor:pointer; border-radius:4px; font-family:inherit; }
+      .menu-btn:hover, .menu-btn.active { background:#3a3a5a; color:#fff; }
+      .menu-dropdown { display:none; position:absolute; top:100%; left:0; min-width:200px; background:#2a2a3a; border:1px solid #3a3a4a; border-radius:6px; box-shadow:0 4px 16px rgba(0,0,0,0.4); z-index:2000; padding:4px 0; }
+      .menu-item.open .menu-dropdown { display:block; }
+      .menu-dd-item { display:flex; align-items:center; gap:8px; padding:8px 14px; font-size:12px; color:#c0c0d0; cursor:pointer; }
+      .menu-dd-item:hover { background:#3a3a5a; color:#fff; }
+      .menu-dd-item .dd-icon { width:18px; text-align:center; }
+      .menu-dd-item .dd-shortcut { margin-left:auto; color:#666; font-size:10px; }
+      .menu-dd-sep { height:1px; background:#3a3a4a; margin:4px 0; }
+      .menu-dd-item.disabled { opacity:0.4; cursor:default; }
+      .menu-dd-item.disabled:hover { background:none; color:#c0c0d0; }
+
+      .menu-bar-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
+      .menu-status { font-size:11px; color:#666; }
+      .menu-link { font-size:11px; color:#8ab4f8; text-decoration:none; }
+      .menu-link:hover { text-decoration:underline; }
+
+      /* ===== PHONE STAGE ===== */
+      .stage { flex:1; display:flex; justify-content:center; align-items:center; overflow:auto; background:linear-gradient(135deg,#1a1a2e,#16213e); position:relative; }
+
+      /* ===== PHONE FRAME (Pixel 8 Pro style) ===== */
+      .phone { width:390px; height:844px; border-radius:48px; background:#1a1a1a; border:3px solid #333; position:relative; box-shadow:0 0 60px rgba(0,0,0,0.5),0 20px 80px rgba(0,0,0,0.4); flex-shrink:0; }
+      .phone::before { content:''; position:absolute; top:12px; left:12px; right:12px; bottom:12px; border-radius:38px; background:#000; z-index:0; }
+      .screen { position:absolute; top:15px; left:15px; right:15px; bottom:15px; border-radius:36px; overflow:hidden; z-index:1; background:#0c0c0c; }
+
+      .camera-bar { position:absolute; top:-2px; left:50%; transform:translateX(-50%); width:120px; height:8px; background:#222; border-radius:0 0 12px 12px; z-index:100; }
+      .camera-dot { position:absolute; top:18px; left:50%; transform:translateX(-50%); width:10px; height:10px; border-radius:50%; background:#111; border:1px solid #2a2a2a; z-index:100; }
+
+      .vol-up { position:absolute; right:-3px; top:180px; width:4px; height:50px; background:#333; border-radius:2px; }
+      .vol-dn { position:absolute; right:-3px; top:240px; width:4px; height:50px; background:#333; border-radius:2px; }
+      .pwr-btn { position:absolute; right:-3px; top:320px; width:4px; height:70px; background:#333; border-radius:2px; }
+
+      .screen-content { position:absolute; inset:0; border-radius:36px; overflow:hidden; transition:transform 0.3s ease; }
+
+      /* ===== LOCK SCREEN ===== */
+      .lock-screen { position:absolute; inset:0; background:linear-gradient(160deg,#1a237e,#311b92,#4a148c); display:flex; flex-direction:column; justify-content:center; align-items:center; transition:transform 0.4s ease,opacity 0.4s; z-index:20; cursor:pointer; }
+      .lock-screen::before { content:''; position:absolute; inset:0; background:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="800"><defs><radialGradient id="g" cx="50%25" cy="30%25"><stop offset="0%25" stop-color="%23e91e63" stop-opacity="0.3"/><stop offset="100%25" stop-color="%23e91e63" stop-opacity="0"/></radialGradient></defs><rect width="400" height="800" fill="url(%23g)"/></svg>'); }
+      .lock-clock { font-size:72px; font-weight:300; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,0.3); z-index:1; }
+      .lock-date { font-size:16px; color:rgba(255,255,255,0.8); margin-top:4px; z-index:1; }
+      .lock-notif { position:absolute; bottom:120px; left:20px; right:20px; z-index:1; }
+      .lock-notif-item { background:rgba(255,255,255,0.15); backdrop-filter:blur(20px); border-radius:16px; padding:12px 16px; margin-bottom:8px; color:#fff; font-size:13px; display:flex; align-items:center; gap:10px; }
+      .lock-notif-icon { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+      .lock-swipe { position:absolute; bottom:70px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,0.5); font-size:12px; text-align:center; animation:swipeHint 2s ease-in-out infinite; z-index:1; }
+      @keyframes swipeHint { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-8px)} }
+      .lock-fingerprint { position:absolute; bottom:24px; left:50%; transform:translateX(-50%); width:48px; height:48px; border-radius:50%; border:2px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2; transition:border-color 0.3s,transform 0.15s; }
+      .lock-fingerprint::before { content:'\1F512'; font-size:18px; }
+      .lock-fingerprint:hover { border-color:rgba(255,255,255,0.6); }
+      .lock-fingerprint:active { border-color:#4caf50; transform:translateX(-50%) scale(0.9); }
+
+      /* ===== HOME SCREEN ===== */
+      .home-screen { position:absolute; inset:0; background:linear-gradient(180deg,#f5f5f7 0%,#e8e8ed 100%); display:flex; flex-direction:column; opacity:0; pointer-events:none; transition:opacity 0.4s; z-index:10; }
+      .home-screen.active { opacity:1; pointer-events:auto; }
+      .home-screen.dark { background:linear-gradient(180deg,#1a1a1a 0%,#0d0d0d 100%); }
+
+      .status-bar { height:44px; display:flex; justify-content:space-between; align-items:center; padding:0 24px 0 28px; font-size:13px; font-weight:600; color:#1a1a1a; flex-shrink:0; position:relative; z-index:30; }
+      .home-screen.dark .status-bar { color:#fff; }
+      .status-left { display:flex; align-items:center; gap:6px; }
+      .status-right { display:flex; align-items:center; gap:6px; font-size:14px; }
+      .status-icons { display:flex; gap:5px; align-items:center; }
+
+      .search-bar { margin:8px 16px 4px; background:#fff; border-radius:48px; padding:10px 20px; display:flex; align-items:center; gap:12px; box-shadow:0 1px 3px rgba(0,0,0,0.08); cursor:text; }
+      .home-screen.dark .search-bar { background:#2a2a2a; box-shadow:none; }
+      .home-screen.dark .search-bar .search-text { color:#aaa; }
+      .search-bar svg { width:20px; height:20px; }
+      .search-text { color:#5f6368; font-size:14px; }
+      .search-mic { margin-left:auto; color:#4285f4; }
+
+      .weather-widget { margin:4px 16px; background:linear-gradient(135deg,#4285f4,#1a73e8); border-radius:28px; padding:16px 20px; color:#fff; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.1); cursor:pointer; }
+      .weather-left { display:flex; flex-direction:column; }
+      .weather-temp { font-size:36px; font-weight:400; }
+      .weather-loc { font-size:12px; opacity:0.9; }
+      .weather-icon { font-size:36px; }
+
+      .app-grid { flex:1; display:grid; grid-template-columns:repeat(4,1fr); grid-auto-rows:auto; gap:16px; padding:12px 16px 80px; align-content:flex-start; overflow-y:auto; }
+      .app-item { display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; transition:transform 0.15s; }
+      .app-item:active { transform:scale(0.88); }
+      .app-icon { width:56px; height:56px; border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:28px; box-shadow:0 2px 6px rgba(0,0,0,0.1); position:relative; }
+      .app-label { font-size:11px; color:#3c4043; text-align:center; white-space:nowrap; }
+      .home-screen.dark .app-label { color:#e0e0e0; }
+
+      .dock { position:absolute; bottom:8px; left:12px; right:12px; background:rgba(255,255,255,0.75); backdrop-filter:blur(20px); border-radius:32px; padding:8px 16px; display:flex; justify-content:space-around; }
+      .home-screen.dark .dock { background:rgba(40,40,40,0.75); }
+      .dock-item { display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; transition:transform 0.15s; }
+      .dock-item:active { transform:scale(0.88); }
+      .dock-icon { width:48px; height:48px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:24px; }
+
+      .nav-pill { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); width:140px; height:5px; background:#1a1a1a; border-radius:3px; z-index:50; cursor:pointer; opacity:0.3; }
+      .nav-pill:hover { opacity:0.6; }
+
+      /* ===== APP WINDOWS ===== */
+      .app-window { position:absolute; inset:0; z-index:40; display:none; flex-direction:column; animation:appOpen 0.25s ease; }
+      .app-window.open { display:flex; }
+      @keyframes appOpen { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
+
+      .app-header { height:52px; display:flex; align-items:center; padding:0 16px; gap:12px; font-size:18px; font-weight:500; flex-shrink:0; }
+      .app-body { flex:1; overflow-y:auto; padding:8px 0; }
+      .app-close { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; font-size:20px; }
+      .app-close:hover { background:rgba(0,0,0,0.05); }
+
+      /* ===== SETTINGS APP ===== */
+      .settings-app { background:#f0f2f5; }
+      .settings-app .app-header { background:#fff; color:#1a1a1a; border-bottom:1px solid #e0e0e0; }
+      .settings-search { margin:12px 16px; background:#fff; border-radius:24px; padding:10px 16px; display:flex; align-items:center; gap:10px; border:1px solid #dadce0; }
+      .settings-search input { border:none; outline:none; font-size:14px; flex:1; background:transparent; font-family:inherit; }
+      .settings-section { margin:0 16px 12px; background:#fff; border-radius:16px; overflow:hidden; }
+      .settings-row { display:flex; align-items:center; gap:16px; padding:14px 16px; border-bottom:1px solid #f0f0f0; cursor:pointer; }
+      .settings-row:last-child { border:none; }
+      .settings-row:active { background:#f5f5f5; }
+      .settings-icon { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+      .settings-info { flex:1; }
+      .settings-title { font-size:14px; color:#1a1a1a; }
+      .settings-sub { font-size:12px; color:#5f6368; margin-top:2px; }
+      .settings-toggle { width:36px; height:20px; border-radius:10px; background:#dadce0; position:relative; transition:background 0.2s; flex-shrink:0; cursor:pointer; }
+      .settings-toggle.on { background:#1a73e8; }
+      .settings-toggle::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition:left 0.2s; box-shadow:0 1px 2px rgba(0,0,0,0.2); }
+      .settings-toggle.on::after { left:18px; }
+
+      /* ===== MESSAGES APP ===== */
+      .messages-app { background:#fff; }
+      .messages-app .app-header { background:#fff; color:#1a1a1a; border-bottom:1px solid #f0f0f0; }
+      .msg-list { flex:1; overflow-y:auto; }
+      .msg-item { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; border-bottom:1px solid #f5f5f5; }
+      .msg-item:active { background:#f9f9f9; }
+      .msg-avatar { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+      .msg-info { flex:1; min-width:0; }
+      .msg-name { font-size:14px; font-weight:500; color:#1a1a1a; }
+      .msg-preview { font-size:13px; color:#5f6368; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+      .msg-time { font-size:11px; color:#5f6368; flex-shrink:0; }
+      .msg-chat { display:none; flex-direction:column; flex:1; }
+      .msg-chat.open { display:flex; }
+      .msg-chat-header { display:flex; align-items:center; gap:12px; padding:8px 16px; border-bottom:1px solid #f0f0f0; flex-shrink:0; }
+      .msg-chat-body { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:8px; }
+      .msg-bubble { max-width:75%; padding:10px 14px; border-radius:18px; font-size:14px; line-height:1.4; }
+      .msg-bubble.them { background:#f0f2f5; align-self:flex-start; border-bottom-left-radius:4px; }
+      .msg-bubble.me { background:#1a73e8; color:#fff; align-self:flex-end; border-bottom-right-radius:4px; }
+      .msg-input-bar { display:flex; gap:8px; padding:8px 16px; border-top:1px solid #f0f0f0; flex-shrink:0; }
+      .msg-input-bar input { flex:1; border:1px solid #dadce0; border-radius:24px; padding:8px 16px; font-size:14px; outline:none; font-family:inherit; }
+      .msg-send { width:40px; height:40px; border-radius:50%; background:#1a73e8; color:#fff; border:none; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; }
+
+      /* ===== PHONE APP ===== */
+      .phone-app { background:#fff; }
+      .phone-app .app-header { background:#fff; color:#1a1a1a; border-bottom:1px solid #f0f0f0; }
+      .phone-keypad { display:flex; flex-direction:column; align-items:center; flex:1; padding:20px; }
+      .phone-number { font-size:28px; color:#1a1a1a; min-height:40px; margin-bottom:20px; text-align:center; }
+      .keypad-grid { display:grid; grid-template-columns:repeat(3,72px); gap:16px; }
+      .keypad-key { width:72px; height:72px; border-radius:50%; border:none; background:#f0f2f5; font-size:26px; font-weight:400; color:#1a1a1a; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; transition:background 0.15s; font-family:inherit; }
+      .keypad-key:active { background:#dadce0; }
+      .keypad-letters { font-size:10px; color:#5f6368; letter-spacing:1px; }
+      .call-btn { width:72px; height:72px; border-radius:50%; background:#1e8e3e; border:none; color:#fff; font-size:28px; cursor:pointer; margin-top:16px; display:flex; align-items:center; justify-content:center; }
+      .call-btn:active { transform:scale(0.9); }
+
+      /* ===== CAMERA APP ===== */
+      .camera-app { background:#000; }
+      .camera-view { flex:1; background:linear-gradient(135deg,#1a237e,#311b92); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
+      .camera-view::before { content:''; position:absolute; inset:0; background:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600"><circle cx="200" cy="200" r="150" fill="%23e91e63" opacity="0.2"/><circle cx="120" cy="400" r="100" fill="%234285f4" opacity="0.15"/><circle cx="300" cy="350" r="80" fill="%23361cd1" opacity="0.1"/></svg>') center/cover; }
+      .camera-viewfinder-text { color:rgba(255,255,255,0.5); font-size:14px; position:absolute; top:60px; left:50%; transform:translateX(-50%); }
+      .camera-top { position:absolute; top:60px; left:0; right:0; display:flex; justify-content:space-around; z-index:5; }
+      .camera-top-btn { width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; border:none; color:#fff; }
+      .camera-top-btn:active { background:rgba(255,255,255,0.3); }
+      .camera-modes { position:absolute; bottom:100px; left:0; right:0; display:flex; justify-content:center; gap:24px; z-index:5; }
+      .camera-mode { color:rgba(255,255,255,0.6); font-size:12px; padding:6px 12px; cursor:pointer; border-radius:16px; }
+      .camera-mode.active { color:#fff; background:rgba(255,255,255,0.15); }
+      .camera-controls { position:absolute; bottom:24px; left:0; right:0; display:flex; justify-content:space-around; align-items:center; z-index:5; }
+      .camera-gallery { width:48px; height:48px; border-radius:12px; background:rgba(255,255,255,0.15); border:2px solid rgba(255,255,255,0.3); cursor:pointer; }
+      .camera-shutter { width:72px; height:72px; border-radius:50%; border:4px solid #fff; background:transparent; cursor:pointer; transition:transform 0.1s; }
+      .camera-shutter:active { transform:scale(0.9); }
+      .camera-switch { width:48px; height:48px; border-radius:50%; background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; border:none; color:#fff; }
+      .camera-switch:active { background:rgba(255,255,255,0.3); }
+
+      /* ===== PHOTOS APP ===== */
+      .photos-app { background:#fff; }
+      .photos-app .app-header { background:#fff; color:#1a1a1a; border-bottom:1px solid #f0f0f0; }
+      .photos-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:2px; padding:0; }
+      .photo-tile { aspect-ratio:1; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:32px; }
+      .photo-tile:active { opacity:0.8; }
+
+      /* ===== CLOCK APP ===== */
+      .clock-app { background:#fff; }
+      .clock-app .app-header { background:#fff; color:#1a1a1a; border-bottom:1px solid #f0f0f0; }
+      .clock-tabs { display:flex; border-bottom:1px solid #f0f0f0; }
+      .clock-tab { flex:1; text-align:center; padding:12px; font-size:13px; color:#5f6368; cursor:pointer; border-bottom:2px solid transparent; }
+      .clock-tab.active { color:#1a73e8; border-bottom-color:#1a73e8; }
+      .clock-tab-content { flex:1; overflow-y:auto; padding:20px; }
+      .world-clock-item { display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-bottom:1px solid #f0f0f0; }
+      .world-clock-city { font-size:16px; font-weight:500; }
+      .world-clock-time { font-size:28px; font-weight:300; color:#1a1a1a; }
+      .world-clock-date { font-size:12px; color:#5f6368; }
+      .alarm-item { display:flex; align-items:center; gap:16px; padding:14px 0; border-bottom:1px solid #f0f0f0; }
+      .alarm-time { font-size:36px; font-weight:300; }
+      .alarm-info { font-size:12px; color:#5f6368; }
+      .stopwatch-display { font-size:64px; font-weight:200; text-align:center; margin:40px 0; font-variant-numeric:tabular-nums; }
+      .stopwatch-controls { display:flex; justify-content:center; gap:24px; }
+      .stopwatch-btn { width:64px; height:64px; border-radius:50%; border:none; font-size:14px; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:inherit; }
+      .stopwatch-btn.start { background:#1e8e3e; color:#fff; }
+      .stopwatch-btn.stop { background:#d93025; color:#fff; }
+      .stopwatch-btn.reset { background:#f0f2f5; color:#1a1a1a; }
+
+      /* ===== BROWSER APP ===== */
+      .browser-app { background:#fff; }
+      .browser-app .app-header { background:#fff; color:#1a1a1a; border-bottom:1px solid #f0f0f0; }
+      .browser-bar { display:flex; gap:8px; padding:8px 16px; border-bottom:1px solid #f0f0f0; }
+      .browser-url { flex:1; background:#f0f2f5; border-radius:24px; padding:8px 16px; font-size:13px; color:#5f6368; display:flex; align-items:center; gap:8px; }
+      .browser-content { padding:16px; overflow-y:auto; flex:1; }
+      .browser-card { background:#fff; border:1px solid #e8e8ed; border-radius:12px; padding:16px; margin-bottom:12px; }
+      .browser-card h3 { font-size:16px; color:#1a1a1a; margin-bottom:6px; }
+      .browser-card p { font-size:13px; color:#5f6368; line-height:1.5; }
+
+      /* ===== QUICK SETTINGS ===== */
+      .quick-settings { position:absolute; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(8px); z-index:60; display:none; opacity:0; transition:opacity 0.3s; }
+      .quick-settings.open { display:block; opacity:1; }
+      .qs-panel { position:absolute; top:0; left:0; right:0; background:rgba(255,255,255,0.95); backdrop-filter:blur(20px); border-radius:0 0 24px 24px; padding:60px 20px 24px; transform:translateY(-100%); transition:transform 0.3s ease; }
+      .quick-settings.open .qs-panel { transform:translateY(0); }
+      .qs-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+      .qs-tile { display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 8px; border-radius:16px; background:rgba(0,0,0,0.05); cursor:pointer; transition:background 0.2s; }
+      .qs-tile:active { background:rgba(0,0,0,0.1); }
+      .qs-tile.active { background:#1a73e8; color:#fff; }
+      .qs-tile.active .qs-tile-icon { color:#fff; }
+      .qs-tile-icon { width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+      .qs-tile-label { font-size:10px; text-align:center; }
+      .qs-bottom { display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:16px; border-top:1px solid rgba(0,0,0,0.08); }
+      .qs-bottom-info { display:flex; align-items:center; gap:8px; font-size:12px; color:#5f6368; }
+      .qs-settings-btn { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; }
+      .qs-brightness-slider { margin-top:12px; }
+      .qs-brightness-slider input { width:100%; cursor:pointer; }
+
+      /* ===== RECENTS ===== */
+      .recents-screen { position:absolute; inset:0; background:#000; z-index:55; display:none; flex-direction:column; opacity:0; transition:opacity 0.3s; }
+      .recents-screen.open { display:flex; opacity:1; }
+      .recents-header { padding:60px 20px 20px; color:#fff; font-size:14px; }
+      .recents-cards { flex:1; overflow-x:auto; display:flex; gap:16px; padding:20px; align-items:center; }
+      .recents-card { min-width:280px; height:500px; background:#1a1a1a; border-radius:24px; overflow:hidden; border:1px solid #333; position:relative; cursor:pointer; transition:transform 0.15s; }
+      .recents-card:active { transform:scale(0.95); }
+      .recents-card-label { position:absolute; bottom:12px; left:16px; color:#fff; font-size:12px; }
+      .recents-clear { position:absolute; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,0.15); color:#fff; border:none; padding:10px 24px; border-radius:20px; font-size:13px; cursor:pointer; backdrop-filter:blur(10px); }
+
+      /* ===== UNLOCK ===== */
+      .screen-content.unlocked .lock-screen { transform:translateY(-100%); opacity:0; pointer-events:none; }
+
+      /* ===== ANIMATIONS ===== */
+      .shutter-flash { position:absolute; inset:0; background:#fff; z-index:200; opacity:0; pointer-events:none; }
+      .shutter-flash.flash { animation:flash 0.2s ease; }
+      @keyframes flash { 0%{opacity:0} 30%{opacity:0.8} 100%{opacity:0} }
+
+      /* ===== SNACKBAR ===== */
+      .snackbar { position:absolute; bottom:40px; left:50%; transform:translateX(-50%); background:#3c4043; color:#fff; padding:12px 24px; border-radius:8px; font-size:13px; z-index:9999; opacity:0; transition:opacity 0.3s; pointer-events:none; }
+
+      /* ===== STATUS BAR (menu bar bottom) ===== */
+      .status-bar-bottom { height:24px; background:#252535; border-top:1px solid #3a3a4a; display:flex; align-items:center; padding:0 12px; font-size:11px; color:#666; flex-shrink:0; gap:16px; }
+      .sbs-item { display:flex; align-items:center; gap:4px; }
+      .sbs-dot { width:8px; height:8px; border-radius:50%; background:#1e8e3e; }
+      .sbs-right { margin-left:auto; }
+    </style>
+  </head>
+  <body>
+
+  <!-- ===== MENU BAR ===== -->
+  <div class="menu-bar">
+    <div class="menu-bar-brand">🦉 imgui_xl</div>
+
+    <div class="menu-item" id="mi-file">
+      <button class="menu-btn" onclick="toggleMenu('mi-file')">File</button>
+      <div class="menu-dropdown">
+        <div class="menu-dd-item" onclick="menuOpenApp('phoneApp')"><span class="dd-icon">📞</span> Open Phone<span class="dd-shortcut">Ctrl+P</span></div>
+        <div class="menu-dd-item" onclick="menuOpenApp('messagesApp')"><span class="dd-icon">💬</span> Open Messages<span class="dd-shortcut">Ctrl+M</span></div>
+        <div class="menu-dd-item" onclick="menuOpenApp('browserApp')"><span class="dd-icon">🌐</span> Open Browser<span class="dd-shortcut">Ctrl+B</span></div>
+        <div class="menu-dd-item" onclick="menuOpenApp('cameraApp')"><span class="dd-icon">📷</span> Open Camera<span class="dd-shortcut">Ctrl+Shift+C</span></div>
+        <div class="menu-dd-item" onclick="menuOpenApp('settingsApp')"><span class="dd-icon">⚙️</span> Open Settings<span class="dd-shortcut">Ctrl+,</span></div>
+        <div class="menu-dd-sep"></div>
+        <div class="menu-dd-item" onclick="menuLockPhone()"><span class="dd-icon">🔒</span> Lock Phone<span class="dd-shortcut">Ctrl+L</span></div>
+        <div class="menu-dd-item" onclick="menuReload()"><span class="dd-icon">🔄</span> Reload Demo<span class="dd-shortcut">Ctrl+R</span></div>
+      </div>
+    </div>
+
+    <div class="menu-item" id="mi-view">
+      <button class="menu-btn" onclick="toggleMenu('mi-view')">View</button>
+      <div class="menu-dropdown">
+        <div class="menu-dd-item" onclick="menuGoHome()"><span class="dd-icon">🏠</span> Home Screen<span class="dd-shortcut">Home</span></div>
+        <div class="menu-dd-item" onclick="menuOpenRecents()"><span class="dd-icon">🔲</span> Recents<span class="dd-shortcut">Ctrl+Tab</span></div>
+        <div class="menu-dd-item" onclick="menuOpenQuickSettings()"><span class="dd-icon">⚡</span> Quick Settings<span class="dd-shortcut">Ctrl+Q</span></div>
+        <div class="menu-dd-sep"></div>
+        <div class="menu-dd-item" onclick="menuToggleDarkMode()"><span class="dd-icon">🌙</span> Toggle Dark Mode<span class="dd-shortcut">Ctrl+D</span></div>
+        <div class="menu-dd-item" onclick="menuToggleTheme()"><span class="dd-icon">🎨</span> Cycle Theme<span class="dd-shortcut">Ctrl+T</span></div>
+      </div>
+    </div>
+
+    <div class="menu-item" id="mi-tools">
+      <button class="menu-btn" onclick="toggleMenu('mi-tools')">Tools</button>
+      <div class="menu-dropdown">
+        <div class="menu-dd-item" onclick="menuOpenApp('clockApp')"><span class="dd-icon">🕐</span> Clock & Stopwatch</div>
+        <div class="menu-dd-item" onclick="menuOpenApp('photosApp')"><span class="dd-icon">🖼️</span> Photos</div>
+        <div class="menu-dd-item" onclick="menuTakePhoto()"><span class="dd-icon">📸</span> Capture Photo</div>
+        <div class="menu-dd-sep"></div>
+        <div class="menu-dd-item" onclick="menuSnack('imgui_xl build info: example_emscripten_pixel')"><span class="dd-icon">ℹ️</span> Build Info</div>
+        <div class="menu-dd-item" onclick="window.open('https://github.com/Turtle-PB/imgui_xl','_blank')"><span class="dd-icon">📂</span> GitHub Repo</div>
+      </div>
+    </div>
+
+    <div class="menu-item" id="mi-help">
+      <button class="menu-btn" onclick="toggleMenu('mi-help')">Help</button>
+      <div class="menu-dropdown">
+        <div class="menu-dd-item" onclick="menuSnack('Click lock screen or fingerprint to unlock. Tap apps to explore!')"><span class="dd-icon">📖</span> Quick Guide</div>
+        <div class="menu-dd-item" onclick="window.open('https://github.com/ocornut/imgui/wiki','_blank')"><span class="dd-icon">📚</span> ImGui Wiki</div>
+        <div class="menu-dd-item" onclick="window.open('https://github.com/Turtle-PB/imgui_xl/blob/master/CONTRIBUTING.md','_blank')"><span class="dd-icon">🤝</span> Contributing</div>
+        <div class="menu-dd-sep"></div>
+        <div class="menu-dd-item" onclick="menuSnack('Pixel OS Model Demo v1.0 | (c) 2024 Paul Adcock / OwlLogics | MIT License')"><span class="dd-icon">ℹ️</span> About</div>
+      </div>
+    </div>
+
+    <div class="menu-bar-right">
+      <span class="menu-status" id="menuStatus">Ready</span>
+      <a class="menu-link" href="https://github.com/Turtle-PB/imgui_xl" target="_blank">GitHub ↗</a>
+    </div>
+  </div>
+
+  <!-- ===== PHONE STAGE ===== -->
+  <div class="stage" id="stage">
+    <div class="phone">
+      <div class="camera-bar"></div>
+      <div class="camera-dot"></div>
+      <div class="vol-up"></div>
+      <div class="vol-dn"></div>
+      <div class="pwr-btn"></div>
+
+      <div class="screen">
+        <div class="screen-content" id="screenContent">
+
+          <!-- ===== LOCK SCREEN ===== -->
+          <div class="lock-screen" id="lockScreen" onclick="handleLockClick(event)">
+            <div class="lock-clock" id="lockClock">--:--</div>
+            <div class="lock-date" id="lockDate">---</div>
+            <div class="lock-notif">
+              <div class="lock-notif-item">
+                <div class="lock-notif-icon" style="background:#1a73e8">📧</div>
+                <div><div style="font-weight:500">Gmail</div><div style="opacity:0.7;font-size:12px">3 new messages</div></div>
+              </div>
+              <div class="lock-notif-item">
+                <div class="lock-notif-icon" style="background:#00897b">💬</div>
+                <div><div style="font-weight:500">Messages</div><div style="opacity:0.7;font-size:12px">Sarah: Hey! Are we still on?</div></div>
+              </div>
+              <div class="lock-notif-item">
+                <div class="lock-notif-icon" style="background:#e8710a">☁️</div>
+                <div><div style="font-weight:500">Weather</div><div style="opacity:0.7;font-size:12px">Storm warning: Heavy rain at 3pm</div></div>
+              </div>
+            </div>
+            <div class="lock-swipe">Swipe up to unlock</div>
+            <div class="lock-fingerprint" id="fingerprint" onclick="unlock()" title="Click to unlock"></div>
+          </div>
+
+          <!-- ===== HOME SCREEN ===== -->
+          <div class="home-screen" id="homeScreen">
+            <div class="status-bar">
+              <div class="status-left"><span id="statusTime">--:--</span></div>
+              <div class="status-right">
+                <span class="status-icons">
+                  <span style="font-size:11px">📶</span>
+                  <span style="font-size:11px">📡</span>
+                  <span style="font-size:13px">🔋</span>
+                  <span style="font-size:10px" id="batteryPct">87%</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="search-bar" onclick="menuSnack('Search opened')">
+              <svg viewBox="0 0 24 24" fill="#4285f4"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+              <span class="search-text">Search</span>
+              <span class="search-mic">🎤</span>
+            </div>
+
+            <div class="weather-widget" onclick="openApp('browserApp')">
+              <div class="weather-left">
+                <div class="weather-temp">72°</div>
+                <div class="weather-loc">Phoenix, AZ</div>
+              </div>
+              <div class="weather-icon">⛅</div>
+            </div>
+
+            <div class="app-grid" id="appGrid">
+              <div class="app-item" onclick="openApp('phoneApp')"><div class="app-icon" style="background:#1e8e3e">📞</div><div class="app-label">Phone</div></div>
+              <div class="app-item" onclick="openApp('messagesApp')"><div class="app-icon" style="background:#00897b">💬</div><div class="app-label">Messages</div></div>
+              <div class="app-item" onclick="openApp('cameraApp')"><div class="app-icon" style="background:#424242">📷</div><div class="app-label">Camera</div></div>
+              <div class="app-item" onclick="openApp('photosApp')"><div class="app-icon" style="background:#e8710a">🖼️</div><div class="app-label">Photos</div></div>
+              <div class="app-item" onclick="openApp('settingsApp')"><div class="app-icon" style="background:#455a64">⚙️</div><div class="app-label">Settings</div></div>
+              <div class="app-item" onclick="openApp('clockApp')"><div class="app-icon" style="background:#1565c0">🕐</div><div class="app-label">Clock</div></div>
+              <div class="app-item" onclick="openApp('browserApp')"><div class="app-icon" style="background:#4285f4">🌐</div><div class="app-label">Chrome</div></div>
+              <div class="app-item" onclick="toggleDarkMode()"><div class="app-icon" style="background:#311b92">🌙</div><div class="app-label">Dark Mode</div></div>
+              <div class="app-item" onclick="openRecents()"><div class="app-icon" style="background:#5f6368">🔲</div><div class="app-label">Recents</div></div>
+              <div class="app-item" onclick="openQuickSettings()"><div class="app-icon" style="background:#37474f">⚡</div><div class="app-label">Quick Set</div></div>
+              <div class="app-item" onclick="toggleTheme()"><div class="app-icon" style="background:#e91e63">🎨</div><div class="app-label">Theme</div></div>
+              <div class="app-item" onclick="menuSnack('Widgets: long-press home screen to add (demo)')"><div class="app-icon" style="background:#0d9244">📋</div><div class="app-label">Widgets</div></div>
+            </div>
+
+            <div class="dock">
+              <div class="dock-item" onclick="openApp('phoneApp')"><div class="dock-icon" style="background:#1e8e3e">📞</div></div>
+              <div class="dock-item" onclick="openApp('messagesApp')"><div class="dock-icon" style="background:#00897b">💬</div></div>
+              <div class="dock-item" onclick="openApp('browserApp')"><div class="dock-icon" style="background:#4285f4">🌐</div></div>
+              <div class="dock-item" onclick="openApp('cameraApp')"><div class="dock-icon" style="background:#424242">📷</div></div>
+            </div>
+          </div>
+
+          <!-- ===== SETTINGS APP ===== -->
+          <div class="app-window" id="settingsApp" style="background:#f0f2f5">
+            <div class="app-header" style="background:#fff;border-bottom:1px solid #e0e0e0">
+              <div class="app-close" onclick="closeApp('settingsApp')">←</div><span>Settings</span>
+            </div>
+            <div class="app-body">
+              <div class="settings-search">
+                <span>🔍</span>
+                <input type="text" placeholder="Search settings" onkeyup="filterSettings(this.value)">
+              </div>
+              <div class="settings-section">
+                <div class="settings-row" onclick="toggleSetting(this)"><div class="settings-icon" style="background:#1a73e8;color:#fff">📶</div><div class="settings-info"><div class="settings-title">Wi-Fi</div><div class="settings-sub">OwlLogics_5G</div></div></div>
+                <div class="settings-row" onclick="toggleSetting(this)"><div class="settings-icon" style="background:#0d9244;color:#fff">📡</div><div class="settings-info"><div class="settings-title">Bluetooth</div><div class="settings-sub">Connected: Pixel Buds Pro</div></div><div class="settings-toggle on"></div></div>
+                <div class="settings-row" onclick="toggleSetting(this)"><div class="settings-icon" style="background:#e8710a;color:#fff">📍</div><div class="settings-info"><div class="settings-title">Location</div><div class="settings-sub">On - High accuracy</div></div><div class="settings-toggle on"></div></div>
+              </div>
+              <div class="settings-section">
+                <div class="settings-row" onclick="toggleSetting(this)"><div class="settings-icon" style="background:#311b92;color:#fff">🌙</div><div class="settings-info"><div class="settings-title">Dark Theme</div><div class="settings-sub" id="darkSub">Off</div></div><div class="settings-toggle" id="darkToggle"></div></div>
+                <div class="settings-row" onclick="toggleSetting(this)"><div class="settings-icon" style="background:#e91e63;color:#fff">🎨</div><div class="settings-info"><div class="settings-title">Wallpaper & Style</div><div class="settings-sub">Material You - Dynamic</div></div></div>
+                <div class="settings-row" onclick="toggleSetting(this)"><div class="settings-icon" style="background:#455a64;color:#fff">🔒</div><div class="settings-info"><div class="settings-title">Security</div><div class="settings-sub">Face unlock, Fingerprint</div></div></div>
+              </div>
+              <div class="settings-section">
+                <div class="settings-row" onclick="menuSnack('Pixel 8 Pro - Android 15 - Tensor G3')"><div class="settings-icon" style="background:#37474f;color:#fff">📱</div><div class="settings-info"><div class="settings-title">About Phone</div><div class="settings-sub">Pixel 8 Pro - Android 15</div></div></div>
+                <div class="settings-row" onclick="menuSnack('System is up to date ✓')"><div class="settings-icon" style="background:#d93025;color:#fff">🔄</div><div class="settings-info"><div class="settings-title">System Update</div><div class="settings-sub">Up to date</div></div></div>
+                <div class="settings-row" onclick="menuSnack('Battery: 87% - 14h remaining')"><div class="settings-icon" style="background:#1e8e3e;color:#fff">🔋</div><div class="settings-info"><div class="settings-title">Battery</div><div class="settings-sub">87% - 14h remaining</div></div></div>
+              </div>
+              <div class="settings-section">
+                <div class="settings-row" onclick="toggleSetting(this)"><div class="settings-icon" style="background:#9c27b0;color:#fff">🔔</div><div class="settings-info"><div class="settings-title">Notifications</div><div class="settings-sub">All apps</div></div><div class="settings-toggle on"></div></div>
+                <div class="settings-row" onclick="toggleSetting(this)"><div class="settings-icon" style="background:#00897b;color:#fff">🔊</div><div class="settings-info"><div class="settings-title">Sound & Vibration</div><div class="settings-sub">Volume: 70%</div></div></div>
+                <div class="settings-row" onclick="toggleSetting(this)"><div class="settings-icon" style="background:#5c6bc0;color:#fff">♿</div><div class="settings-info"><div class="settings-title">Accessibility</div><div class="settings-sub">TalkBack, Magnification</div></div></div>
+              </div>
+              <div style="text-align:center;padding:20px;font-size:11px;color:#5f6368">Pixel OS Model Demo | (c) 2024 OwlLogics / Paul Adcock<br>Part of <a href="https://github.com/Turtle-PB/imgui_xl" target="_blank" style="color:#1a73e8">imgui_xl</a> — MIT License</div>
+            </div>
+          </div>
+
+          <!-- ===== MESSAGES APP ===== -->
+          <div class="app-window" id="messagesApp" style="background:#fff">
+            <div class="app-header" style="background:#fff;border-bottom:1px solid #f0f0f0">
+              <div class="app-close" onclick="closeApp('messagesApp')">←</div><span>Messages</span>
+            </div>
+            <div class="msg-list" id="msgList">
+              <div class="msg-item" onclick="openChat('Sarah Chen','💙','#e91e63')"><div class="msg-avatar" style="background:#e91e63;color:#fff">SC</div><div class="msg-info"><div class="msg-name">Sarah Chen</div><div class="msg-preview">Hey! Are we still on for tonight?</div></div><div class="msg-time">2:15 PM</div></div>
+              <div class="msg-item" onclick="openChat('Mom','❤️','#1a73e8')"><div class="msg-avatar" style="background:#1a73e8;color:#fff">M</div><div class="msg-info"><div class="msg-name">Mom</div><div class="msg-preview">Call me when you get a chance ❤️</div></div><div class="msg-time">12:30 PM</div></div>
+              <div class="msg-item" onclick="openChat('Noah','🎮','#4caf50')"><div class="msg-avatar" style="background:#4caf50;color:#fff">N</div><div class="msg-info"><div class="msg-name">Noah</div><div class="msg-preview">Can we play Roblox later?</div></div><div class="msg-time">11:45 AM</div></div>
+              <div class="msg-item" onclick="openChat('Work Group','💼','#ff9800')"><div class="msg-avatar" style="background:#ff9800;color:#fff">W</div><div class="msg-info"><div class="msg-name">Work Group</div><div class="msg-preview">Mike: Sprint review at 3pm</div></div><div class="msg-time">10:00 AM</div></div>
+              <div class="msg-item" onclick="openChat('Amazon','📦','#9c27b0')"><div class="msg-avatar" style="background:#9c27b0;color:#fff">A</div><div class="msg-info"><div class="msg-name">Amazon</div><div class="msg-preview">Your package arrives today by 8pm</div></div><div class="msg-time">9:00 AM</div></div>
+            </div>
+            <div class="msg-chat" id="msgChat">
+              <div class="msg-chat-header">
+                <div class="app-close" onclick="closeChat()">←</div>
+                <div class="msg-avatar" id="chatAvatar" style="width:36px;height:36px;font-size:16px"></div>
+                <span id="chatName" style="font-size:16px;font-weight:500"></span>
+              </div>
+              <div class="msg-chat-body" id="chatBody"></div>
+              <div class="msg-input-bar">
+                <input type="text" id="msgInput" placeholder="Message..." onkeydown="if(event.key==='Enter')sendMsg()" -webkit-user-select:text; user-select:text;>
+                <button class="msg-send" onclick="sendMsg()">➤</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== PHONE APP ===== -->
+          <div class="app-window" id="phoneApp" style="background:#fff">
+            <div class="app-header" style="background:#fff;border-bottom:1px solid #f0f0f0">
+              <div class="app-close" onclick="closeApp('phoneApp')">←</div><span>Phone</span>
+            </div>
+            <div class="phone-keypad">
+              <div class="phone-number" id="phoneNumber"></div>
+              <div class="keypad-grid">
+                <button class="keypad-key" onclick="dial('1')">1</button>
+                <button class="keypad-key" onclick="dial('2')">2<span class="keypad-letters">ABC</span></button>
+                <button class="keypad-key" onclick="dial('3')">3<span class="keypad-letters">DEF</span></button>
+                <button class="keypad-key" onclick="dial('4')">4<span class="keypad-letters">GHI</span></button>
+                <button class="keypad-key" onclick="dial('5')">5<span class="keypad-letters">JKL</span></button>
+                <button class="keypad-key" onclick="dial('6')">6<span class="keypad-letters">MNO</span></button>
+                <button class="keypad-key" onclick="dial('7')">7<span class="keypad-letters">PQRS</span></button>
+                <button class="keypad-key" onclick="dial('8')">8<span class="keypad-letters">TUV</span></button>
+                <button class="keypad-key" onclick="dial('9')">9<span class="keypad-letters">WXYZ</span></button>
+                <button class="keypad-key" onclick="dial('*')">*</button>
+                <button class="keypad-key" onclick="dial('0')">0<span class="keypad-letters">+</span></button>
+                <button class="keypad-key" onclick="dial('#')">#</button>
+              </div>
+              <button class="call-btn" onclick="makeCall()">📞</button>
+              <button onclick="document.getElementById('phoneNumber').textContent=''" style="margin-top:12px;border:none;background:none;font-size:14px;color:#1a73e8;cursor:pointer;font-family:inherit">Clear</button>
+            </div>
+          </div>
+
+          <!-- ===== CAMERA APP ===== -->
+          <div class="app-window" id="cameraApp" style="background:#000">
+            <div class="camera-view">
+              <div class="camera-viewfinder-text">📷 Live View</div>
+              <div class="camera-top">
+                <button class="camera-top-btn" onclick="menuSnack('Flash: Auto ⚡')">⚡</button>
+                <button class="camera-top-btn" onclick="menuSnack('HDR: On')">HDR</button>
+                <button class="camera-top-btn" onclick="closeApp('cameraApp')">⏷</button>
+              </div>
+              <div class="camera-modes" id="cameraModes">
+                <div class="camera-mode" onclick="setCameraMode(this,'Night')">Night</div>
+                <div class="camera-mode active" onclick="setCameraMode(this,'Photo')">Photo</div>
+                <div class="camera-mode" onclick="setCameraMode(this,'Portrait')">Portrait</div>
+                <div class="camera-mode" onclick="setCameraMode(this,'Video')">Video</div>
+                <div class="camera-mode" onclick="setCameraMode(this,'Pano')">Pano</div>
+              </div>
+              <div class="camera-controls">
+                <div class="camera-gallery" onclick="openApp('photosApp');menuSnack('Opening Photos...')"></div>
+                <button class="camera-shutter" onclick="takePhoto()"></button>
+                <button class="camera-switch" onclick="menuSnack('Switched to front camera 🤳')">🔄</button>
+              </div>
+            </div>
+            <div class="shutter-flash" id="shutterFlash"></div>
+          </div>
+
+          <!-- ===== PHOTOS APP ===== -->
+          <div class="app-window" id="photosApp" style="background:#fff">
+            <div class="app-header" style="background:#fff;border-bottom:1px solid #f0f0f0">
+              <div class="app-close" onclick="closeApp('photosApp')">←</div><span>Photos</span>
+            </div>
+            <div class="app-body">
+              <div style="padding:12px 16px;font-size:13px;color:#5f6368;font-weight:500">Today</div>
+              <div class="photos-grid">
+                <div class="photo-tile" style="background:linear-gradient(135deg,#e91e63,#9c27b0)" onclick="menuSnack('Photo viewed 🌅')">🌅</div>
+                <div class="photo-tile" style="background:linear-gradient(135deg,#4caf50,#1b5e20)" onclick="menuSnack('Photo viewed 🌳')">🌳</div>
+                <div class="photo-tile" style="background:linear-gradient(135deg,#2196f3,#0d47a1)" onclick="menuSnack('Photo viewed 🌊')">🌊</div>
+                <div class="photo-tile" style="background:linear-gradient(135deg,#ff9800,#e65100)" onclick="menuSnack('Photo viewed 🌇')">🌇</div>
+                <div class="photo-tile" style="background:linear-gradient(135deg,#9c27b0,#311b92)" onclick="menuSnack('Photo viewed 🎆')">🎆</div>
+                <div class="photo-tile" style="background:linear-gradient(135deg,#00bcd4,#006064)" onclick="menuSnack('Photo viewed ❄️')">❄️</div>
+              </div>
+              <div style="padding:12px 16px;font-size:13px;color:#5f6368;font-weight:500">Yesterday</div>
+              <div class="photos-grid">
+                <div class="photo-tile" style="background:linear-gradient(135deg,#795548,#3e2723)" onclick="menuSnack('Photo viewed ⛰️')">⛰️</div>
+                <div class="photo-tile" style="background:linear-gradient(135deg,#cddc39,#33691e)" onclick="menuSnack('Photo viewed 🌿')">🌿</div>
+                <div class="photo-tile" style="background:linear-gradient(135deg,#ff5722,#bf360c)" onclick="menuSnack('Photo viewed 🔥')">🔥</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== CLOCK APP ===== -->
+          <div class="app-window" id="clockApp" style="background:#fff">
+            <div class="app-header" style="background:#fff;border-bottom:1px solid #f0f0f0">
+              <div class="app-close" onclick="closeApp('clockApp')">←</div><span>Clock</span>
+            </div>
+            <div class="clock-tabs">
+              <div class="clock-tab active" onclick="switchClockTab(this,'world')">World</div>
+              <div class="clock-tab" onclick="switchClockTab(this,'alarm')">Alarm</div>
+              <div class="clock-tab" onclick="switchClockTab(this,'stopwatch')">Stopwatch</div>
+            </div>
+            <div class="clock-tab-content" id="clockContent"></div>
+          </div>
+
+          <!-- ===== BROWSER APP ===== -->
+          <div class="app-window" id="browserApp" style="background:#fff">
+            <div class="app-header" style="background:#fff;border-bottom:1px solid #f0f0f0">
+              <div class="app-close" onclick="closeApp('browserApp')">←</div><span>Chrome</span>
+            </div>
+            <div class="browser-bar"><div class="browser-url"><span>🔒</span> google.com</div></div>
+            <div class="browser-content">
+              <div class="browser-card"><h3>🔍 Google Search</h3><p>The world's information at your fingertips.</p><div style="margin-top:12px;display:flex;gap:8px"><div style="background:#4285f4;color:#fff;padding:8px 20px;border-radius:24px;font-size:12px;cursor:pointer" onclick="menuSnack('Searching...')">Search</div><div style="background:#fff;border:1px solid #dadce0;padding:8px 16px;border-radius:24px;font-size:12px;cursor:pointer" onclick="menuSnack('Lucky!')">I'm Feeling Lucky</div></div></div>
+              <div class="browser-card"><h3>📰 Top Stories</h3><p>Android 15 brings new AI features, privacy controls, and Material You enhancements.</p></div>
+              <div class="browser-card"><h3>🌟 Discover</h3><p>Pixel 8 Pro voted best smartphone of 2024 by The Verge.</p></div>
+              <div class="browser-card"><h3>🎵 Trending</h3><p>New music releases this week - check out the charts.</p></div>
+            </div>
+          </div>
+
+          <!-- ===== QUICK SETTINGS ===== -->
+          <div class="quick-settings" id="quickSettings" onclick="if(event.target===this)closeQuickSettings()">
+            <div class="qs-panel">
+              <div class="qs-grid">
+                <div class="qs-tile active" onclick="this.classList.toggle('active');menuSnack('Wi-Fi toggled')"><div class="qs-tile-icon">📶</div><div class="qs-tile-label">Wi-Fi</div></div>
+                <div class="qs-tile active" onclick="this.classList.toggle('active');menuSnack('Bluetooth toggled')"><div class="qs-tile-icon">📡</div><div class="qs-tile-label">Bluetooth</div></div>
+                <div class="qs-tile" onclick="this.classList.toggle('active');menuSnack('Do Not Disturb')"><div class="qs-tile-icon">🔕</div><div class="qs-tile-label">DND</div></div>
+                <div class="qs-tile" onclick="this.classList.toggle('active');menuSnack('Flashlight toggled')"><div class="qs-tile-icon">🔦</div><div class="qs-tile-label">Flash</div></div>
+                <div class="qs-tile" onclick="menuToggleDarkMode();this.classList.toggle('active')"><div class="qs-tile-icon">🌙</div><div class="qs-tile-label">Dark</div></div>
+                <div class="qs-tile" onclick="this.classList.toggle('active');menuSnack('Airplane mode')"><div class="qs-tile-icon">✈️</div><div class="qs-tile-label">Airplane</div></div>
+                <div class="qs-tile" onclick="this.classList.toggle('active');menuSnack('Location toggled')"><div class="qs-tile-icon">📍</div><div class="qs-tile-label">Location</div></div>
+                <div class="qs-tile" onclick="this.classList.toggle('active');menuSnack('Hotspot toggled')"><div class="qs-tile-icon">📶</div><div class="qs-tile-label">Hotspot</div></div>
+              </div>
+              <div class="qs-bottom">
+                <div class="qs-bottom-info">☀️ Brightness: <span id="brightness">80%</span></div>
+                <div class="qs-settings-btn" onclick="closeQuickSettings();openApp('settingsApp')">⚙️</div>
+              </div>
+              <div class="qs-brightness-slider"><input type="range" min="10" max="100" value="80" oninput="document.getElementById('brightness').textContent=this.value+'%'"></div>
+            </div>
+          </div>
+
+          <!-- ===== RECENTS ===== -->
+          <div class="recents-screen" id="recentsScreen">
+            <div class="recents-header">Recent apps</div>
+            <div class="recents-cards">
+              <div class="recents-card" onclick="closeRecents();openApp('browserApp')"><div style="background:#4285f4;height:100%;display:flex;align-items:center;justify-content:center;font-size:48px;color:#fff">🌐</div><div class="recents-card-label">Chrome</div></div>
+              <div class="recents-card" onclick="closeRecents();openApp('messagesApp')"><div style="background:#00897b;height:100%;display:flex;align-items:center;justify-content:center;font-size:48px;color:#fff">💬</div><div class="recents-card-label">Messages</div></div>
+              <div class="recents-card" onclick="closeRecents();openApp('settingsApp')"><div style="background:#455a64;height:100%;display:flex;align-items:center;justify-content:center;font-size:48px;color:#fff">⚙️</div><div class="recents-card-label">Settings</div></div>
+            </div>
+            <button class="recents-clear" onclick="closeRecents()">Clear All</button>
+          </div>
+
+          <!-- Nav pill -->
+          <div class="nav-pill" onclick="goHome()" title="Home"></div>
+
+          <!-- Snackbar -->
+          <div class="snackbar" id="snackbar"></div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BOTTOM STATUS BAR ===== -->
+  <div class="status-bar-bottom">
+    <div class="sbs-item"><div class="sbs-dot"></div><span id="sbsStatus">Demo Running</span></div>
+    <div class="sbs-item">📱 Pixel 8 Pro Sim</div>
+    <div class="sbs-item">🦉 imgui_xl</div>
+    <div class="sbs-item sbs-right" id="sbsTime">--:--:--</div>
+  </div>
+
+  <script>
+  // ===== CLOCK =====
+  function updateClock(){
+    var now=new Date();
+    var h=String(now.getHours()).padStart(2,'0');
+    var m=String(now.getMinutes()).padStart(2,'0');
+    var s=String(now.getSeconds()).padStart(2,'0');
+    var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var dateStr=days[now.getDay()]+', '+months[now.getMonth()]+' '+now.getDate();
+    var lc=document.getElementById('lockClock'); if(lc) lc.textContent=h+':'+m;
+    var ld=document.getElementById('lockDate'); if(ld) ld.textContent=dateStr;
+    var st=document.getElementById('statusTime'); if(st) st.textContent=h+':'+m;
+    var sbsT=document.getElementById('sbsTime'); if(sbsT) sbsT.textContent=h+':'+m+':'+s;
+    // Update world clocks if visible
+    var cc=document.getElementById('clockContent');
+    if(cc && cc.querySelector('.world-clock-city')){
+      function tzTime(offset){var d=new Date(now.getTime()+(offset*60*60*1000));return String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0')}
+      var items=cc.querySelectorAll('.world-clock-item');
+      if(items.length>=4){
+        items[0].querySelector('.world-clock-time').textContent=tzTime(-7);
+        items[1].querySelector('.world-clock-time').textContent=tzTime(1);
+        items[2].querySelector('.world-clock-time').textContent=tzTime(9);
+        items[3].querySelector('.world-clock-time').textContent=tzTime(11);
+      }
+    }
+  }
+  updateClock();
+  setInterval(updateClock,1000);
+
+  // ===== MENU BAR =====
+  function toggleMenu(id){
+    var el=document.getElementById(id);
+    var isOpen=el.classList.contains('open');
+    document.querySelectorAll('.menu-item').forEach(function(m){m.classList.remove('open')});
+    if(!isOpen) el.classList.add('open');
+  }
+  document.addEventListener('click',function(e){
+    if(!e.target.closest('.menu-item')) document.querySelectorAll('.menu-item').forEach(function(m){m.classList.remove('open')});
+  });
+
+  // Menu bridge functions
+  function menuOpenApp(id){ closeAllApps(); if(!isUnlocked()) unlock(); openApp(id); updateMenuStatus('Opened: '+id); }
+  function menuGoHome(){ goHome(); updateMenuStatus('Home'); }
+  function menuLockPhone(){ lockPhone(); updateMenuStatus('Phone locked'); }
+  function menuReload(){ location.reload(); }
+  function menuOpenRecents(){ if(!isUnlocked()){unlock();} openRecents(); updateMenuStatus('Recents'); }
+  function menuOpenQuickSettings(){ if(!isUnlocked()){unlock();} openQuickSettings(); updateMenuStatus('Quick Settings'); }
+  function menuToggleDarkMode(){ toggleDarkMode(); updateMenuStatus('Dark mode: '+(darkMode?'On':'Off')); }
+  function menuToggleTheme(){ toggleTheme(); updateMenuStatus('Theme: '+themes[themeIdx].name); }
+  function menuTakePhoto(){ if(!isUnlocked()){unlock();} openApp('cameraApp'); setTimeout(takePhoto,300); }
+  function menuSnack(msg){ snackbar(msg); }
+  function updateMenuStatus(msg){ var el=document.getElementById('menuStatus'); if(el) el.textContent=msg; setTimeout(function(){var e=document.getElementById('menuStatus');if(e)e.textContent='Ready'},3000); }
+
+  // ===== LOCK / UNLOCK =====
+  function isUnlocked(){ return document.getElementById('screenContent').classList.contains('unlocked'); }
+  function unlock(){
+    document.getElementById('screenContent').classList.add('unlocked');
+    document.getElementById('homeScreen').classList.add('active');
+    updateMenuStatus('Unlocked');
+  }
+  function lockPhone(){
+    document.getElementById('screenContent').classList.remove('unlocked');
+    document.getElementById('homeScreen').classList.remove('active');
+    closeAllApps();
+  }
+  function handleLockClick(e){
+    if(e.target.id==='fingerprint') return; // fingerprint has its own handler
+    if(e.target.classList.contains('lock-screen')) unlock();
+  }
+  // Swipe up to unlock
+  var touchStartY=0;
+  document.getElementById('lockScreen').addEventListener('touchstart',function(e){touchStartY=e.touches[0].clientY});
+  document.getElementById('lockScreen').addEventListener('touchend',function(e){
+    if(touchStartY-e.changedTouches[0].clientY>50) unlock();
+  });
+
+  // ===== APP MANAGEMENT =====
+  function openApp(id){ closeAllApps(); var el=document.getElementById(id); if(el) el.classList.add('open'); }
+  function closeApp(id){ var el=document.getElementById(id); if(el) el.classList.remove('open'); }
+  function closeAllApps(){
+    document.querySelectorAll('.app-window').forEach(function(a){a.classList.remove('open')});
+    closeQuickSettings();
+    closeRecents();
+  }
+  function goHome(){ closeAllApps(); if(!document.getElementById('homeScreen').classList.contains('active')) unlock(); }
+
+  // ===== SETTINGS =====
+  function toggleSetting(el){
+    var toggle=el.querySelector('.settings-toggle');
+    if(!toggle) return;
+    toggle.classList.toggle('on');
+    var title=el.querySelector('.settings-title').textContent;
+    var sub=el.querySelector('.settings-sub');
+    if(title==='Dark Theme'){
+      var isOn=toggle.classList.contains('on');
+      sub.textContent=isOn?'On':'Off';
+      if(isOn&&!darkMode) toggleDarkMode();
+      else if(!isOn&&darkMode) toggleDarkMode();
+    }
+    snackbar(title+' '+(toggle.classList.contains('on')?'enabled':'disabled'));
+  }
+  function filterSettings(q){
+    document.querySelectorAll('.settings-row').forEach(function(row){
+      var t=row.querySelector('.settings-title')?row.querySelector('.settings-title').textContent.toLowerCase():'';
+      row.style.display=t.indexOf(q.toLowerCase())>=0?'flex':'none';
+    });
+  }
+
+  // ===== MESSAGES =====
+  var chatHistory={
+    'Sarah Chen':[{t:'them',m:'Hey! Are we still on for tonight?'},{t:'me',m:'Yeah! 8pm right?'},{t:'them',m:'Yes! Can\'t wait 😄'},{t:'them',m:'Should I bring anything?'}],
+    'Mom':[{t:'them',m:'Call me when you get a chance ❤️'},{t:'me',m:'Will do Mom, just finishing up work'},{t:'them',m:'Love you!'}],
+    'Noah':[{t:'them',m:'Can we play Roblox later?'},{t:'me',m:'Sure buddy! After homework ok?'},{t:'them',m:'Yay! 🎮'}],
+    'Work Group':[{t:'them',m:'Mike: Sprint review at 3pm'},{t:'them',m:'Don\'t forget the slides'},{t:'me',m:'On it!'}],
+    'Amazon':[{t:'them',m:'Your package arrives today by 8pm'},{t:'them',m:'Tracking: AMZ123456789'}]
+  };
+  var currentChat='';
+  function openChat(name,emoji,color){
+    currentChat=name;
+    document.getElementById('chatName').textContent=name;
+    var av=document.getElementById('chatAvatar');
+    av.textContent=emoji; av.style.background=color; av.style.color='#fff';
+    var body=document.getElementById('chatBody');
+    body.innerHTML='';
+    (chatHistory[name]||[]).forEach(function(msg){
+      var d=document.createElement('div'); d.className='msg-bubble '+msg.t; d.textContent=msg.m; body.appendChild(d);
+    });
+    body.scrollTop=body.scrollHeight;
+    document.getElementById('msgList').style.display='none';
+    document.getElementById('msgChat').classList.add('open');
+  }
+  function closeChat(){
+    document.getElementById('msgChat').classList.remove('open');
+    document.getElementById('msgList').style.display='block';
+  }
+  function sendMsg(){
+    var inp=document.getElementById('msgInput');
+    var txt=inp.value.trim();
+    if(!txt) return;
+    var body=document.getElementById('chatBody');
+    var d=document.createElement('div'); d.className='msg-bubble me'; d.textContent=txt; body.appendChild(d);
+    if(!chatHistory[currentChat]) chatHistory[currentChat]=[];
+    chatHistory[currentChat].push({t:'me',m:txt});
+    inp.value='';
+    body.scrollTop=body.scrollHeight;
+    setTimeout(function(){
+      var replies=['Cool! 👍','Got it!','Haha 😂','Sure thing!','Sounds good!','Let me check...','Okay!','😊','Absolutely!','That works!'];
+      var r=replies[Math.floor(Math.random()*replies.length)];
+      var d2=document.createElement('div'); d2.className='msg-bubble them'; d2.textContent=r; body.appendChild(d2);
+      chatHistory[currentChat].push({t:'them',m:r});
+      body.scrollTop=body.scrollHeight;
+    },800+Math.random()*1200);
+  }
+
+  // ===== PHONE KEYPAD =====
+  function dial(d){ var el=document.getElementById('phoneNumber'); el.textContent+=d; }
+  function makeCall(){
+    var num=document.getElementById('phoneNumber').textContent;
+    if(num) snackbar('Calling '+num+'... 📞');
+    else snackbar('Enter a number first');
+  }
+
+  // ===== CAMERA =====
+  function takePhoto(){
+    var flash=document.getElementById('shutterFlash');
+    flash.classList.add('flash');
+    setTimeout(function(){flash.classList.remove('flash');snackbar('Photo captured! 📸')},200);
+  }
+  function setCameraMode(el,mode){
+    document.querySelectorAll('.camera-mode').forEach(function(m){m.classList.remove('active')});
+    el.classList.add('active');
+    snackbar('Mode: '+mode);
+  }
+
+  // ===== CLOCK TABS =====
+  function switchClockTab(el,tab){
+    document.querySelectorAll('.clock-tab').forEach(function(t){t.classList.remove('active')});
+    el.classList.add('active');
+    var c=document.getElementById('clockContent');
+    if(tab==='world'){
+      c.innerHTML='<div class="world-clock-item"><div><div class="world-clock-city">Phoenix</div><div class="world-clock-date">MST</div></div><div class="world-clock-time">'+tzTime(-7)+'</div></div><div class="world-clock-item"><div><div class="world-clock-city">London</div><div class="world-clock-date">GMT</div></div><div class="world-clock-time">'+tzTime(1)+'</div></div><div class="world-clock-item"><div><div class="world-clock-city">Tokyo</div><div class="world-clock-date">JST</div></div><div class="world-clock-time">'+tzTime(9)+'</div></div><div class="world-clock-item"><div><div class="world-clock-city">Sydney</div><div class="world-clock-date">AEDT</div></div><div class="world-clock-time">'+tzTime(11)+'</div></div>';
+    }else if(tab==='alarm'){
+      c.innerHTML='<div class="alarm-item"><div style="flex:1"><div class="alarm-time">7:00 AM</div><div class="alarm-info">Mon-Fri · Work</div></div><div class="settings-toggle on" onclick="this.classList.toggle(\'on\')"></div></div><div class="alarm-item"><div style="flex:1"><div class="alarm-time">9:00 AM</div><div class="alarm-info">Sat-Sun · Weekend</div></div><div class="settings-toggle on" onclick="this.classList.toggle(\'on\')"></div></div><div class="alarm-item"><div style="flex:1"><div class="alarm-time">3:00 PM</div><div class="alarm-info">Daily · Pick up Noah</div></div><div class="settings-toggle" onclick="this.classList.toggle(\'on\')"></div></div>';
+    }else if(tab==='stopwatch'){
+      c.innerHTML='<div class="stopwatch-display" id="swDisplay">00:00.00</div><div class="stopwatch-controls"><button class="stopwatch-btn start" id="swBtn" onclick="startSw()">Start</button><button class="stopwatch-btn reset" onclick="resetSw()">Reset</button></div>';
+    }
+  }
+  function tzTime(offset){var d=new Date(new Date().getTime()+(offset*60*60*1000));return String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0')}
+  var swInterval=null,swTime=0,swRunning=false;
+  function startSw(){
+    var btn=document.getElementById('swBtn');
+    if(!swRunning){
+      swRunning=true; btn.textContent='Stop'; btn.classList.remove('start'); btn.classList.add('stop');
+      swInterval=setInterval(function(){
+        swTime+=10;
+        var ms=Math.floor((swTime%1000)/10),s=Math.floor(swTime/1000)%60,mn=Math.floor(swTime/60000);
+        var el=document.getElementById('swDisplay');
+        if(el) el.textContent=String(mn).padStart(2,'0')+':'+String(s).padStart(2,'0')+'.'+String(ms).padStart(2,'0');
+      },10);
+    }else{
+      swRunning=false; btn.textContent='Start'; btn.classList.remove('stop'); btn.classList.add('start');
+      clearInterval(swInterval);
+    }
+  }
+  function resetSw(){swTime=0;swRunning=false;clearInterval(swInterval);var el=document.getElementById('swDisplay');if(el)el.textContent='00:00.00';var btn=document.getElementById('swBtn');if(btn){btn.textContent='Start';btn.classList.remove('stop');btn.classList.add('start')}}
+
+  // Initialize clock tab
+  setTimeout(function(){
+    var firstTab=document.querySelector('.clock-tab.active');
+    if(firstTab) switchClockTab(firstTab,'world');
+  },100);
+
+  // ===== QUICK SETTINGS =====
+  function openQuickSettings(){ document.getElementById('quickSettings').classList.add('open'); }
+  function closeQuickSettings(){ document.getElementById('quickSettings').classList.remove('open'); }
+
+  // ===== RECENTS =====
+  function openRecents(){ document.getElementById('recentsScreen').classList.add('open'); }
+  function closeRecents(){ document.getElementById('recentsScreen').classList.remove('open'); }
+
+  // ===== DARK MODE =====
+  var darkMode=false;
+  function toggleDarkMode(){
+    darkMode=!darkMode;
+    var hs=document.getElementById('homeScreen');
+    if(darkMode){
+      hs.classList.add('dark');
+      hs.querySelectorAll('.app-label').forEach(function(l){l.style.color='#e0e0e0'});
+    }else{
+      hs.classList.remove('dark');
+      hs.querySelectorAll('.app-label').forEach(function(l){l.style.color='#3c4043'});
+    }
+    // Sync settings toggle
+    var dt=document.getElementById('darkToggle'); var ds=document.getElementById('darkSub');
+    if(dt){ if(darkMode) dt.classList.add('on'); else dt.classList.remove('on'); }
+    if(ds){ ds.textContent=darkMode?'On':'Off'; }
+    snackbar(darkMode?'Dark mode on 🌙':'Light mode on ☀️');
+  }
+
+  // ===== THEME =====
+  var themes=[
+    {bg:'linear-gradient(180deg,#f5f5f7,#e8e8ed)',name:'Default'},
+    {bg:'linear-gradient(180deg,#fce4ec,#f8bbd0)',name:'Pink'},
+    {bg:'linear-gradient(180deg,#e8eaf6,#c5cae9)',name:'Indigo'},
+    {bg:'linear-gradient(180deg,#e0f2f1,#b2dfdb)',name:'Teal'},
+    {bg:'linear-gradient(180deg,#fff3e0,#ffe0b2)',name:'Orange'},
+    {bg:'linear-gradient(180deg,#1a1a1a,#0d0d0d)',name:'Dark'},
+  ];
+  var themeIdx=0;
+  function toggleTheme(){
+    themeIdx=(themeIdx+1)%themes.length;
+    var hs=document.getElementById('homeScreen');
+    hs.style.background=themes[themeIdx].bg;
+    if(themeIdx===5){
+      hs.querySelectorAll('.app-label').forEach(function(l){l.style.color='#e0e0e0'});
+    }else{
+      hs.querySelectorAll('.app-label').forEach(function(l){l.style.color='#3c4043'});
+    }
+    snackbar('Theme: '+themes[themeIdx].name+' 🎨');
+  }
+
+  // ===== SNACKBAR =====
+  var snackTimeout;
+  function snackbar(msg){
+    var el=document.getElementById('snackbar');
+    el.textContent=msg; el.style.opacity='1';
+    clearTimeout(snackTimeout);
+    snackTimeout=setTimeout(function(){el.style.opacity='0'},2500);
+  }
+
+  // ===== KEYBOARD SHORTCUTS =====
+  document.addEventListener('keydown',function(e){
+    if(e.target.tagName==='INPUT') return; // Don't interfere with text input
+    if(e.key==='Escape') goHome();
+    if(e.key==='Home') goHome();
+    if(e.ctrlKey||e.metaKey){
+      switch(e.key.toLowerCase()){
+        case 'p': e.preventDefault(); menuOpenApp('phoneApp'); break;
+        case 'm': e.preventDefault(); menuOpenApp('messagesApp'); break;
+        case 'b': e.preventDefault(); menuOpenApp('browserApp'); break;
+        case 'l': e.preventDefault(); menuLockPhone(); break;
+        case 'q': e.preventDefault(); menuOpenQuickSettings(); break;
+        case 'd': e.preventDefault(); menuToggleDarkMode(); break;
+        case 't': e.preventDefault(); menuToggleTheme(); break;
+        case 'r': e.preventDefault(); menuReload(); break;
+        case ',': e.preventDefault(); menuOpenApp('settingsApp'); break;
+        case 'tab': e.preventDefault(); menuOpenRecents(); break;
+      }
+    }
+    if(e.key==='F1'){ e.preventDefault(); menuSnack('Click lock screen or fingerprint to unlock. Tap apps to explore! Use menu bar for all functions.'); }
+  });
+
+  // ===== GESTURES (mouse + touch) =====
+  var gestureStartY=0, gestureStartX=0;
+  var screenEl=document.querySelector('.screen-content');
+  screenEl.addEventListener('touchstart',function(e){
+    gestureStartY=e.touches[0].clientY;
+    gestureStartX=e.touches[0].clientX;
+  });
+  screenEl.addEventListener('touchend',function(e){
+    var dy=gestureStartY-e.changedTouches[0].clientY;
+    var dx=gestureStartX-e.changedTouches[0].clientX;
+    // Swipe up from top = quick settings
+    if(gestureStartY<60&&dy<-50){ openQuickSettings(); }
+    // Swipe up from bottom = home
+    if(gestureStartY>800&&dy>50){ goHome(); }
+    // Swipe right from left edge = back
+    if(gestureStartX<20&&dx>80){ goHome(); }
+  });
+  // Mouse gesture support for desktop
+  screenEl.addEventListener('mousedown',function(e){
+    gestureStartY=e.clientY; gestureStartX=e.clientX;
+  });
+  screenEl.addEventListener('mouseup',function(e){
+    var dy=gestureStartY-e.clientY;
+    var dx=gestureStartX-e.clientX;
+    // Only handle if it was a swipe (not a click)
+    if(Math.abs(dy)>80||Math.abs(dx)>80){
+      if(gestureStartY<60&&dy<-50){ openQuickSettings(); }
+      if(gestureStartY>800&&dy>50){ goHome(); }
+      if(gestureStartX<20&&dx>80){ goHome(); }
+    }
+  });
+  </script>
+  </body>
+</html>

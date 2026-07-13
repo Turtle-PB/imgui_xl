@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>imgui_xl — Dear ImGui XL Demo</title>
+<meta name="description" content="Dear ImGui XL — Enhanced community fork with professional demo and Echonation visuals.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+<style>
+/* === RESET & BASE === */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d0e12;--bg-panel:#161821;--bg-panel-hover:#1c1f2b;--bg-input:#0a0b0f;
+  --border:#2a2d3a;--border-active:#4a6fa5;
+  --text:#c8cdd9;--text-dim:#6b7080;--text-bright:#e8eaf0;
+  --accent:#4a9eff;--accent-glow:rgba(74,158,255,.15);
+  --green:#5cb85c;--orange:#f0ad4e;--red:#d9534f;--purple:#ab47bc;
+  --mono:'Cascadia Code','Fira Code','JetBrains Mono','Consolas',monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+html{font-size:14px}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden;height:100vh}
+canvas{display:block}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg-panel)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-active)}
+
+/* === LAYOUT === */
+#app{display:grid;grid-template-rows:38px 1fr 24px;height:100vh}
+#menubar{display:flex;align-items:center;gap:0;background:var(--bg-panel);border-bottom:1px solid var(--border);padding:0 8px;overflow-x:auto;white-space:nowrap}
+#menubar .mb-item{padding:0 12px;height:38px;display:flex;align-items:center;cursor:pointer;color:var(--text-dim);font-size:13px;transition:color .15s,background .15s}
+#menubar .mb-item:hover{color:var(--text-bright);background:var(--bg-panel-hover)}
+#menubar .mb-sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+#menubar .mb-spacer{flex:1}
+#menubar .mb-right{color:var(--text-dim);font-size:12px;padding:0 12px;display:flex;align-items:center;gap:8px}
+#menubar .mb-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+
+#main{display:grid;grid-template-columns:1fr 300px;overflow:hidden}
+#viewport{position:relative;overflow:hidden;background:var(--bg)}
+#viewport canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+#viewport-label{position:absolute;top:8px;left:8px;font-family:var(--mono);font-size:11px;color:var(--text-dim);z-index:10;pointer-events:none;text-shadow:0 0 4px var(--bg)}
+#viewport-stats{position:absolute;bottom:8px;left:8px;font-family:var(--mono);font-size:11px;color:var(--text-dim);z-index:10;pointer-events:none}
+
+#sidebar{background:var(--bg-panel);border-left:1px solid var(--border);overflow-y:auto;padding:8px}
+
+#statusbar{display:flex;align-items:center;background:var(--bg-panel);border-top:1px solid var(--border);padding:0 12px;font-family:var(--mono);font-size:11px;color:var(--text-dim);gap:16px;overflow-x:auto;white-space:nowrap}
+
+/* === IMGUI-STYLE WIDGETS === */
+.win{background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;margin-bottom:8px;overflow:hidden}
+.win-header{display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text-bright);cursor:default}
+.win-body{padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+
+.row{display:flex;align-items:center;gap:8px;min-height:20px}
+.label{font-size:12px;color:var(--text-dim);min-width:80px;flex-shrink:0}
+.value{font-family:var(--mono);font-size:12px;color:var(--text-bright)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:5px 16px;background:var(--bg-panel-hover);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;cursor:pointer;transition:all .15s;user-select:none}
+.btn:hover{border-color:var(--border-active);color:var(--text-bright)}
+.btn:active{background:var(--accent);color:#fff}
+.btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-sm{padding:3px 10px;font-size:11px}
+
+.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text);user-select:none}
+.chk-box{width:16px;height:16px;border:1px solid var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.chk.checked .chk-box{background:var(--accent);border-color:var(--accent)}
+.chk.checked .chk-box::after{content:'';width:8px;height:4px;border:1.5px solid #fff;border-top:none;border-right:none;transform:rotate(-45deg) translateY(-1px)}
+.chk:hover .chk-box{border-color:var(--border-active)}
+
+.slider{flex:1;height:20px;display:flex;align-items:center;position:relative;cursor:pointer}
+.slider-track{width:100%;height:4px;background:var(--bg-input);border-radius:2px;position:relative}
+.slider-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .05s}
+.slider-knob{position:absolute;top:50%;width:10px;height:20px;background:var(--bg-panel);border:1px solid var(--accent);border-radius:2px;transform:translate(-50%,-50%);transition:left .05s;box-shadow:0 0 4px var(--accent-glow)}
+.slider:hover .slider-knob{box-shadow:0 0 8px var(--accent-glow)}
+
+.combo{flex:1;display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:var(--bg-input);border:1px solid var(--border);border-radius:3px;font-size:12px;cursor:pointer;transition:border .15s}
+.combo:hover{border-color:var(--border-active)}
+.combo-arrow{color:var(--text-dim);font-size:10px}
+
+.tabbar{display:flex;gap:0;border-bottom:1px solid var(--border);margin:-8px -10px 4px}
+.tab{padding:6px 14px;font-size:12px;cursor:pointer;color:var(--text-dim);border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+.color-swatch{width:14px;height:14px;border-radius:2px;border:1px solid var(--border);display:inline-block;cursor:pointer}
+
+.collab{cursor:pointer;display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-dim);padding:2px 0}
+.collab:hover{color:var(--text)}
+.collab .arrow{font-size:10px;transition:transform .15s}
+.collab.open .arrow{transform:rotate(90deg)}
+
+.tooltip{position:fixed;background:var(--bg-panel);border:1px solid var(--border-active);border-radius:4px;padding:4px 8px;font-size:11px;color:var(--text-bright);pointer-events:none;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,.4);max-width:250px}
+
+/* === ECHONATION VISUAL === */
+.echo-title{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;text-align:center;mix-blend-mode:screen}
+.echo-title h1{font-size:42px;font-weight:700;letter-spacing:.15em;color:rgba(232,234,240,.12);text-transform:uppercase}
+.echo-title p{font-size:13px;letter-spacing:.3em;color:rgba(232,234,240,.06);margin-top:4px;text-transform:uppercase}
+
+/* === HERO === */
+.hero-overlay{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;pointer-events:none;transition:opacity .8s}
+.hero-overlay.hidden{opacity:0}
+.hero-title{font-size:56px;font-weight:800;letter-spacing:.05em;color:var(--text-bright);text-shadow:0 0 30px var(--accent-glow);margin-bottom:8px}
+.hero-sub{font-size:16px;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase}
+.hero-credit{margin-top:24px;font-size:12px;color:var(--text-dim);letter-spacing:.05em}
+.hero-credit a{color:var(--accent);text-decoration:none}
+.hero-enter{margin-top:32px;pointer-events:auto;padding:10px 32px;background:rgba(74,158,255,.1);border:1px solid var(--accent);border-radius:4px;color:var(--accent);font-size:14px;cursor:pointer;transition:all .3s;letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+.hero-enter:hover{background:var(--accent);color:#fff;box-shadow:0 0 20px var(--accent-glow)}
+
+@media(max-width:768px){
+  #main{grid-template-columns:1fr}
+  #sidebar{display:none}
+  .hero-title{font-size:36px}
+  .echo-title h1{font-size:28px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- MENUBAR -->
+  <div id="menubar">
+    <div class="mb-item" onclick="alert('imgui_xl Demo — File menu is decorative in this web demo')">File</div>
+    <div class="mb-item">Edit</div>
+    <div class="mb-item">View</div>
+    <div class="mb-item">Demo</div>
+    <div class="mb-item">Tools</div>
+    <div class="mb-sep"></div>
+    <div class="mb-item" id="mb-about">About</div>
+    <div class="mb-spacer"></div>
+    <div class="mb-right">
+      <span class="mb-dot"></span>
+      <span id="mb-fps">60.0 FPS</span>
+      <span>|</span>
+      <span id="mb-frames">0 frames</span>
+    </div>
+  </div>
+
+  <!-- MAIN AREA -->
+  <div id="main">
+    <!-- VIEWPORT (Canvas) -->
+    <div id="viewport">
+      <canvas id="canvas"></canvas>
+      <div id="viewport-label">## Viewport — Echonation Visual [DockSpace]</div>
+      <div id="viewport-stats">
+        <div>Draw: <span id="stat-draws">0</span> cmds</div>
+        <div>Verts: <span id="stat-verts">0</span></div>
+        <div>Particles: <span id="stat-particles">0</span></div>
+      </div>
+      <div class="hero-overlay" id="hero">
+        <div class="hero-title">imgui_xl</div>
+        <div class="hero-sub">Dear ImGui XL — Enhanced Community Fork</div>
+        <div class="hero-credit">
+          Echonation visuals by <a href="https://youtube.com/@echonationmusic" target="_blank">@Echonation</a> · 
+          Fork by <a href="https://github.com/Turtle-PB" target="_blank">Turtle-PB</a>
+        </div>
+        <button class="hero-enter" onclick="enterDemo()">Enter Demo ▸</button>
+      </div>
+      <div class="echo-title" id="echo-title" style="opacity:0">
+        <h1>Echonation</h1>
+        <p>Sound · Waveform · Resonance</p>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+
+      <!-- Visual Control Window -->
+      <div class="win">
+        <div class="win-header">⚙ Visual Controls</div>
+        <div class="win-body">
+          <div class="tabbar">
+            <div class="tab active" onclick="switchTab(event,'echo')">Echonation</div>
+            <div class="tab" onclick="switchTab(event,'imgui')">ImGui Demo</div>
+          </div>
+          <div id="tab-echo">
+            <div class="row"><span class="label">Mode</span>
+              <div class="combo" onclick="cycleMode()">
+                <span id="mode-label">Ripple Rings</span><span class="combo-arrow">▼</span>
+              </div>
+            </div>
+            <div class="row"><span class="label">Intensity</span>
+              <div class="slider" data-value="0.7"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+            </div>
+            <div class="row"><span class="label">Speed</span>
+              <div class="slider" data-value="1.0"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+            </div>
+            <div class="row"><span class="label">Hue Shift</span>
+              <div class="slider" data-value="0.5"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+            </div>
+            <div class="row"><span class="label">Particles</span><span class="value" id="val-particles">512</span></div>
+            <div class="row" style="gap:4px">
+              <button class="btn btn-sm" onclick="toggleEchonation()">Toggle</button>
+              <button class="btn btn-sm" onclick="pulse()">Pulse</button>
+              <button class="btn btn-sm" onclick="randomize()">Randomize</button>
+            </div>
+          </div>
+          <div id="tab-imgui" style="display:none">
+            <div class="collab open" onclick="toggleCollapsible(this)">
+              <span class="arrow">▸</span> Window Options
+            </div>
+            <div class="win-body" id="collab-1">
+              <div class="chk checked" onclick="this.classList.toggle('checked')"><span class="chk-box"></span> Show Title Bar</div>
+              <div class="chk checked" onclick="this.classList.toggle('checked')"><span class="chk-box"></span> No Resize</div>
+              <div class="chk" onclick="this.classList.toggle('checked')"><span class="chk-box"></span> No Move</div>
+              <div class="chk checked" onclick="this.classList.toggle('checked')"><span class="chk-box"></span> Auto Resize</div>
+            </div>
+            <div class="collab open" onclick="toggleCollapsible(this)">
+              <span class="arrow">▸</span> Style Editor
+            </div>
+            <div class="win-body" id="collab-2">
+              <div class="row"><span class="label">Alpha</span>
+                <div class="slider" data-value="0.95"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+              </div>
+              <div class="row"><span class="label">Window Rounding</span>
+                <div class="slider" data-value="0.3"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+              </div>
+              <div class="row"><span class="label">Frame Rounding</span>
+                <div class="slider" data-value="0.2"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+              </div>
+              <div class="row" style="gap:4px;flex-wrap:wrap">
+                <span class="color-swatch" style="background:#4a9eff" title="Accent"></span>
+                <span class="color-swatch" style="background:#5cb85c" title="Success"></span>
+                <span class="color-swatch" style="background:#f0ad4e" title="Warning"></span>
+                <span class="color-swatch" style="background:#d9534f" title="Danger"></span>
+                <span class="color-swatch" style="background:#ab47bc" title="Purple"></span>
+                <span class="color-swatch" style="background:#e8eaf0" title="Text"></span>
+              </div>
+            </div>
+            <div class="collab" onclick="toggleCollapsible(this)">
+              <span class="arrow">▸</span> Demo Widgets
+            </div>
+            <div class="win-body" id="collab-3" style="display:none">
+              <button class="btn btn-sm" onclick="toggleEchonation()">Toggle Visual</button>
+              <div class="row"><span class="label">Counter</span><span class="value" id="imgui-counter">0</span></div>
+              <button class="btn btn-sm" onclick="document.getElementById('imgui-counter').textContent=parseInt(document.getElementById('imgui-counter').textContent)+1">Increment</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Window -->
+      <div class="win">
+        <div class="win-header">📊 Metrics</div>
+        <div class="win-body">
+          <div class="row"><span class="label">FPS</span><span class="value" id="stat-fps">60.0</span></div>
+          <div class="row"><span class="label">Frame Time</span><span class="value" id="stat-ms">16.67ms</span></div>
+          <div class="row"><span class="label">Vertices</span><span class="value" id="stat-verts2">0</span></div>
+          <div class="row"><span class="label">Draw Calls</span><span class="value" id="stat-draws2">0</span></div>
+          <div class="row"><span class="label">Input Events</span><span class="value" id="stat-events">0</span></div>
+          <div class="row"><span class="label">Allocated</span><span class="value" id="stat-alloc">0 KB</span></div>
+        </div>
+      </div>
+
+      <!-- About Window -->
+      <div class="win">
+        <div class="win-header">ℹ About imgui_xl</div>
+        <div class="win-body">
+          <p style="font-size:12px;color:var(--text);line-height:1.5">Enhanced community fork of <strong style="color:var(--accent)">Dear ImGui</strong> — the bloat-free immediate-mode GUI for C++.</p>
+          <div class="row"><span class="label">Upstream</span><a href="https://github.com/ocornut/imgui" style="color:var(--accent);font-size:12px;text-decoration:none">ocornut/imgui</a></div>
+          <div class="row"><span class="label">Fork</span><a href="https://github.com/Turtle-PB/imgui_xl" style="color:var(--accent);font-size:12px;text-decoration:none">Turtle-PB/imgui_xl</a></div>
+          <div class="row"><span class="label">License</span><span class="value" style="font-size:11px">MIT</span></div>
+          <div class="row"><span class="label">Version</span><span class="value" style="font-size:11px">1.92.6 (docking)</span></div>
+          <div style="margin-top:4px;padding-top:6px;border-top:1px solid var(--border);font-size:11px;color:var(--text-dim);line-height:1.4">
+            Echonation visuals inspired by <a href="https://youtube.com/@echonationmusic" style="color:var(--accent);text-decoration:none">@Echonation</a>.<br>
+            Fork by <a href="https://github.com/Turtle-PB" style="color:var(--accent);text-decoration:none">Paul Adcock</a> (Turtle-PB).
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div id="statusbar">
+    <span>imgui_xl v1.92.6-docking</span>
+    <span>|</span>
+    <span id="sb-mode">Mode: Ripple Rings</span>
+    <span>|</span>
+    <span id="sb-mouse">Mouse: (0, 0)</span>
+    <span>|</span>
+    <span id="sb-time">00:00:00</span>
+    <span style="flex:1"></span>
+    <span style="color:var(--green)">● Connected</span>
+    <span>GL ES 3.0 / WebGL2</span>
+  </div>
+</div>
+
+<script>
+// === STATE ===
+const state = {
+  running: false,
+  echoActive: true,
+  mode: 0,
+  modes: ['Ripple Rings','Spectrum Wave','Particle Field','Voronoid Shimmer','Plasma Flow'],
+  intensity: 0.7,
+  speed: 1.0,
+  hueShift: 0.5,
+  particleCount: 512,
+  particles: [],
+  ripples: [],
+  mouseX: 0, mouseY: 0,
+  frame: 0,
+  fps: 60, frameTime: 16.67,
+  drawCalls: 0, vertices: 0,
+  inputEvents: 0,
+  startTime: 0,
+  allocatedKB: 0,
+};
+
+// === CANVAS SETUP ===
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = window.devicePixelRatio || 1;
+
+function resize() {
+  const vp = document.getElementById('viewport');
+  W = vp.clientWidth; H = vp.clientHeight;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// === PARTICLES ===
+function initParticles(n) {
+  state.particles = [];
+  for (let i = 0; i < n; i++) {
+    state.particles.push({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5,
+      life: Math.random(), size: Math.random() * 2 + 0.5,
+      hue: Math.random() * 360,
+    });
+  }
+}
+initParticles(state.particleCount);
+
+// === AUDIO ANALYSIS (simulated) ===
+let audioData = new Float32Array(256);
+let audioEnergy = 0, audioBass = 0, audioMid = 0, audioHigh = 0;
+
+function simulateAudio(t) {
+  const beat = Math.sin(t * 2.4) * 0.5 + 0.5;
+  const bass = Math.sin(t * 0.8) * 0.7 + 0.3;
+  const mid = Math.sin(t * 3.1) * 0.4 + 0.4;
+  const high = Math.sin(t * 7.2) * 0.3 + 0.2;
+  audioEnergy = beat * state.intensity;
+  audioBass = bass * state.intensity;
+  audioMid = mid * state.intensity;
+  audioHigh = high * state.intensity;
+  for (let i = 0; i < 256; i++) {
+    audioData[i] = (Math.sin(t * (1 + i * 0.02) + i * 0.1) * 0.5 + 0.5) * audioEnergy;
+  }
+}
+
+// === RENDER MODES ===
+function renderRippleRings(t) {
+  ctx.fillStyle = 'rgba(13,14,18,' + (0.05 + 0.02 * (1 - state.intensity)) + ')';
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H / 2;
+  const rings = 12;
+  for (let i = 0; i < rings; i++) {
+    const phase = (t * state.speed * 0.5 + i / rings) % 1;
+    const radius = phase * Math.min(W, H) * 0.6;
+    const alpha = (1 - phase) * state.intensity * 0.6;
+    const hue = (i * 30 + t * 60 * state.hueShift) % 360;
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(1, radius), 0, Math.PI * 2);
+    ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${alpha})`;
+    ctx.lineWidth = 2 + audioBass * 4;
+    ctx.stroke();
+  }
+  // Central pulse
+  const pulseR = 20 + audioEnergy * 60;
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(1, pulseR));
+  grad.addColorStop(0, `hsla(${(t * 120 * state.hueShift) % 360}, 80%, 70%, ${0.4 * state.intensity})`);
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(cx - pulseR, cy - pulseR, pulseR * 2, pulseR * 2);
+
+  state.drawCalls = rings + 1;
+  state.vertices = (rings + 1) * 128;
+}
+
+function renderSpectrumWave(t) {
+  ctx.fillStyle = 'rgba(13,14,18,0.08)';
+  ctx.fillRect(0, 0, W, H);
+
+  const bars = 96;
+  const barW = W / bars;
+  for (let i = 0; i < bars; i++) {
+    const v = audioData[Math.floor(i / bars * 256)] || 0;
+    const h = v * H * 0.35 * state.intensity;
+    const x = i * barW;
+    const y = H / 2 - h;
+    const hue = (i / bars * 360 + t * 30 * state.hueShift) % 360;
+    const grad = ctx.createLinearGradient(0, y, 0, y + h * 2);
+    grad.addColorStop(0, `hsla(${hue}, 85%, 65%, 0.9)`);
+    grad.addColorStop(0.5, `hsla(${hue}, 80%, 50%, 0.6)`);
+    grad.addColorStop(1, `hsla(${hue}, 70%, 30%, 0.1)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(x + 1, y, Math.max(1, barW - 2), Math.max(1, h * 2));
+  }
+  // Waveform overlay
+  ctx.beginPath();
+  for (let i = 0; i <= W; i += 4) {
+    const v = audioData[Math.floor(i / W * 256)] || 0;
+    const y = H / 2 + Math.sin(i * 0.02 + t * 3 * state.speed) * 40 * audioMid + v * 20;
+    if (i === 0) ctx.moveTo(i, y); else ctx.lineTo(i, y);
+  }
+  ctx.strokeStyle = `hsla(${(t * 100 * state.hueShift) % 360}, 90%, 70%, ${state.intensity})`;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  state.drawCalls = bars + 1;
+  state.vertices = bars * 6 + W / 2;
+}
+
+function renderParticleField(t) {
+  ctx.fillStyle = 'rgba(13,14,18,0.06)';
+  ctx.fillRect(0, 0, W, H);
+
+  const count = state.particles.length;
+  for (let i = 0; i < count; i++) {
+    const p = state.particles[i];
+    p.x += p.vx * state.speed * (1 + audioEnergy * 2);
+    p.y += p.vy * state.speed * (1 + audioEnergy * 2);
+    p.life -= 0.003 * state.speed;
+    if (p.life <= 0 || p.x < 0 || p.x > W || p.y < 0 || p.y > H) {
+      p.x = Math.random() * W; p.y = Math.random() * H;
+      p.vx = (Math.random() - 0.5) * 0.5; p.vy = (Math.random() - 0.5) * 0.5;
+      p.life = 1; p.size = Math.random() * 2 + 0.5;
+    }
+    // Connect nearby particles
+    for (let j = i + 1; j < Math.min(i + 8, count); j++) {
+      const p2 = state.particles[j];
+      const dx = p.x - p2.x, dy = p.y - p2.y;
+      const dist = dx * dx + dy * dy;
+      if (dist < 6400) {
+        const a = (1 - dist / 6400) * state.intensity * 0.3;
+        const hue = (p.hue + t * 20 * state.hueShift) % 360;
+        ctx.strokeStyle = `hsla(${hue}, 70%, 55%, ${a})`;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+    }
+    const hue = (p.hue + t * 30 * state.hueShift) % 360;
+    ctx.fillStyle = `hsla(${hue}, 80%, 60%, ${p.life * state.intensity * 0.8})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, Math.max(0.5, p.size * (1 + audioBass)), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  state.drawCalls = count;
+  state.vertices = count * 4;
+}
+
+function renderVoronoidShimmer(t) {
+  ctx.fillStyle = 'rgba(13,14,18,0.04)';
+  ctx.fillRect(0, 0, W, H);
+
+  const cells = 8;
+  const cw = W / cells, ch = H / cells;
+  for (let i = 0; i < cells; i++) {
+    for (let j = 0; j < cells; j++) {
+      const x = i * cw + cw / 2 + Math.sin(t * state.speed + i * 0.5 + j * 0.3) * 30 * state.intensity;
+      const y = j * ch + ch / 2 + Math.cos(t * state.speed + i * 0.3 + j * 0.5) * 30 * state.intensity;
+      const r = 30 + audioMid * 60 + Math.sin(t * 2 + i + j) * 20;
+      const hue = ((i + j) * 45 + t * 40 * state.hueShift) % 360;
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, Math.max(1, r));
+      grad.addColorStop(0, `hsla(${hue}, 75%, 55%, ${0.15 * state.intensity})`);
+      grad.addColorStop(0.5, `hsla(${hue}, 65%, 40%, ${0.08 * state.intensity})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+  }
+  // Grid lines
+  ctx.strokeStyle = `rgba(74,158,255,${0.1 * state.intensity})`;
+  ctx.lineWidth = 0.5;
+  for (let i = 1; i < cells; i++) {
+    ctx.beginPath(); ctx.moveTo(i * cw, 0); ctx.lineTo(i * cw, H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, j * ch); ctx.lineTo(W, j * ch); ctx.stroke();
+  }
+
+  state.drawCalls = cells * cells;
+  state.vertices = cells * cells * 4;
+}
+
+function renderPlasmaFlow(t) {
+  // Use image data for plasma
+  const scale = 4;
+  const sw = Math.floor(W / scale), sh = Math.floor(H / scale);
+  const imageData = ctx.createImageData(sw, sh);
+  const data = imageData.data;
+  for (let y = 0; y < sh; y++) {
+    for (let x = 0; x < sw; x++) {
+      const i = (y * sw + x) * 4;
+      const fx = x / sw, fy = y / sh;
+      const v = Math.sin(fx * 8 + t * state.speed) +
+                Math.sin(fy * 6 + t * state.speed * 0.7) +
+                Math.sin((fx + fy) * 7 + t * state.speed * 1.3) +
+                Math.sin(Math.sqrt((fx - 0.5) ** 2 + (fy - 0.5) ** 2) * 12 + t * state.speed * 2);
+      const norm = (v + 4) / 8;
+      const hue = (norm * 360 + t * 60 * state.hueShift) % 360;
+      const [r, g, b] = hslToRgb(hue, 0.7, 0.5 * state.intensity + 0.15);
+      data[i] = r; data[i+1] = g; data[i+2] = b; data[i+3] = 255;
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+  // Scale up
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(canvas, 0, 0, sw, sh, 0, 0, W, H);
+
+  state.drawCalls = 2;
+  state.vertices = sw * sh;
+}
+
+function hslToRgb(h, s, l) {
+  h /= 360;
+  let r, g, b;
+  if (s === 0) { r = g = b = l; }
+  else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+const renderFns = [renderRippleRings, renderSpectrumWave, renderParticleField, renderVoronoidShimmer, renderPlasmaFlow];
+
+// === MAIN LOOP ===
+let lastTime = 0;
+let fpsAccum = 0, fpsCount = 0, fpsLast = 0;
+
+function loop(timestamp) {
+  const dt = (timestamp - lastTime) / 1000;
+  lastTime = timestamp;
+  const t = (timestamp - state.startTime) / 1000;
+
+  // FPS
+  if (dt > 0) {
+    fpsAccum += 1 / dt; fpsCount++;
+    if (timestamp - fpsLast > 500) {
+      state.fps = fpsAccum / fpsCount;
+      state.frameTime = dt * 1000;
+      fpsAccum = 0; fpsCount = 0; fpsLast = timestamp;
+    }
+  }
+
+  if (state.echoActive) {
+    simulateAudio(t);
+    const fn = renderFns[state.mode];
+    if (fn) fn(t);
+  } else {
+    ctx.fillStyle = 'rgba(13,14,18,0.05)';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  state.frame++;
+  updateStats();
+  requestAnimationFrame(loop);
+}
+
+function updateStats() {
+  const fpsStr = state.fps.toFixed(1);
+  document.getElementById('mb-fps').textContent = fpsStr + ' FPS';
+  document.getElementById('mb-frames').textContent = state.frame + ' frames';
+  document.getElementById('stat-fps').textContent = fpsStr;
+  document.getElementById('stat-ms').textContent = state.frameTime.toFixed(2) + 'ms';
+  document.getElementById('stat-draws').textContent = state.drawCalls;
+  document.getElementById('stat-draws2').textContent = state.drawCalls;
+  document.getElementById('stat-verts').textContent = state.vertices;
+  document.getElementById('stat-verts2').textContent = state.vertices;
+  document.getElementById('stat-particles').textContent = state.particles.length;
+  document.getElementById('val-particles').textContent = state.particles.length;
+  document.getElementById('stat-events').textContent = state.inputEvents;
+  state.allocatedKB = Math.round(state.particles.length * 0.05 + state.frame * 0.001);
+  document.getElementById('stat-alloc').textContent = state.allocatedKB + ' KB';
+  // Time
+  const elapsed = (Date.now() - state.startTime) / 1000;
+  const h = Math.floor(elapsed / 3600);
+  const m = Math.floor((elapsed % 3600) / 60);
+  const s = Math.floor(elapsed % 60);
+  document.getElementById('sb-time').textContent =
+    String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+// === UI INTERACTIONS ===
+function enterDemo() {
+  document.getElementById('hero').classList.add('hidden');
+  const et = document.getElementById('echo-title');
+  et.style.transition = 'opacity 2s';
+  et.style.opacity = '1';
+  setTimeout(() => { et.style.opacity = '0.15'; }, 2000);
+  state.running = true;
+}
+
+function toggleEchonation() { state.echoActive = !state.echoActive; }
+
+function pulse() {
+  for (let i = 0; i < 30; i++) {
+    state.particles.push({
+      x: W/2, y: H/2,
+      vx: (Math.random()-0.5)*8, vy: (Math.random()-0.5)*8,
+      life: 1, size: Math.random()*3+1, hue: Math.random()*360,
+    });
+  }
+}
+
+function randomize() {
+  state.intensity = Math.random();
+  state.speed = Math.random() * 2 + 0.3;
+  state.hueShift = Math.random();
+  updateSliders();
+}
+
+function cycleMode() {
+  state.mode = (state.mode + 1) % state.modes.length;
+  document.getElementById('mode-label').textContent = state.modes[state.mode];
+  document.getElementById('sb-mode').textContent = 'Mode: ' + state.modes[state.mode];
+}
+
+function switchTab(e, tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById('tab-echo').style.display = tab === 'echo' ? '' : 'none';
+  document.getElementById('tab-imgui').style.display = tab === 'imgui' ? '' : 'none';
+}
+
+function toggleCollapsible(el) {
+  el.classList.toggle('open');
+  const body = el.nextElementSibling;
+  if (body) body.style.display = body.style.display === 'none' ? '' : 'none';
+}
+
+// === SLIDERS ===
+function updateSliders() {
+  document.querySelectorAll('.slider').forEach(s => {
+    const val = parseFloat(s.dataset.value || 0.5);
+    const track = s.querySelector('.slider-track');
+    const fill = s.querySelector('.slider-fill');
+    const knob = s.querySelector('.slider-knob');
+    fill.style.width = (val * 100) + '%';
+    knob.style.left = (val * 100) + '%';
+  });
+}
+document.querySelectorAll('.slider').forEach(s => {
+  let dragging = false;
+  const update = (e) => {
+    const rect = s.getBoundingClientRect();
+    const val = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    s.dataset.value = val;
+    const fill = s.querySelector('.slider-fill');
+    const knob = s.querySelector('.slider-knob');
+    fill.style.width = (val * 100) + '%';
+    knob.style.left = (val * 100) + '%';
+    // Map to state
+    const label = s.parentElement.querySelector('.label')?.textContent || '';
+    if (label === 'Intensity') state.intensity = val;
+    else if (label === 'Speed') state.speed = val * 2;
+    else if (label === 'Hue Shift') state.hueShift = val;
+    else if (label === 'Particles') {
+      state.particleCount = Math.floor(val * 1024) + 64;
+      initParticles(state.particleCount);
+    }
+  };
+  s.addEventListener('mousedown', e => { dragging = true; update(e); });
+  window.addEventListener('mousemove', e => { if (dragging) update(e); });
+  window.addEventListener('mouseup', () => { dragging = false; });
+});
+
+// === MOUSE TRACKING ===
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  state.mouseX = e.clientX - rect.left;
+  state.mouseY = e.clientY - rect.top;
+  state.inputEvents++;
+  document.getElementById('sb-mouse').textContent =
+    `Mouse: (${Math.round(state.mouseX)}, ${Math.round(state.mouseY)})`;
+});
+
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  // Spawn particles at click
+  for (let i = 0; i < 20; i++) {
+    state.particles.push({
+      x, y,
+      vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6,
+      life: 1, size: Math.random()*3+1, hue: Math.random()*360,
+    });
+  }
+  state.inputEvents++;
+  pulse();
+});
+
+// === KEYBOARD ===
+window.addEventListener('keydown', e => {
+  state.inputEvents++;
+  if (e.key === ' ') { toggleEchonation(); e.preventDefault(); }
+  if (e.key === 'r') randomize();
+  if (e.key === 'p') pulse();
+  if (e.key === 'Tab') { cycleMode(); e.preventDefault(); }
+});
+
+// === INIT ===
+updateSliders();
+state.startTime = performance.now();
+lastTime = state.startTime;
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

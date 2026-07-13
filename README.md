@@ -57,6 +57,17 @@ make
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on submitting issues, PRs, and syncing with upstream.
 
+## Web Demo: Pixel OS Model
+
+This fork includes an interactive **Pixel OS Model Demo** — a working Pixel 8 Pro phone simulator that showcases Pixel OS capabilities in any browser:
+
+- Lock screen, home screen, 7 functional apps (Phone, Messages, Camera, Settings, Clock, Photos, Browser)
+- Quick Settings, Recents, Dark Mode, Theme switcher
+- Full menu bar with keyboard shortcuts
+- 100% self-contained HTML — no build step, no dependencies
+
+**Run it:** Open [`examples/example_emscripten_pixel/pixel_os_demo.html`](examples/example_emscripten_pixel/pixel_os_demo.html) in any browser, or visit the [live demo on GitHub Pages](https://turtle-pb.github.io/imgui_xl/examples/example_emscripten_pixel/pixel_os_demo.html).
+
 ## Upstream Resources
 
 - **Dear ImGui Homepage**: [github.com/ocornut/imgui](https://github.com/ocornut/imgui)

@@ -3,922 +3,259 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>imgui_xl — Dear ImGui XL Demo</title>
-<meta name="description" content="Dear ImGui XL — Enhanced community fork with professional demo, Echonation visuals, Pixel OS demo, and dancing motion.">
+<title>imgui_xl — Dear ImGui XL</title>
+<meta name="description" content="Dear ImGui XL — Enhanced community fork with live demos, backend improvements, and Echonation visuals.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
 <style>
-/* === RESET & BASE === */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#0d0e12;--bg-panel:#161821;--bg-panel-hover:#1c1f2b;--bg-input:#0a0b0f;
-  --border:#2a2d3a;--border-active:#4a6fa5;
-  --text:#c8cdd9;--text-dim:#6b7080;--text-bright:#e8eaf0;
-  --accent:#4a9eff;--accent-glow:rgba(74,158,255,.15);
-  --green:#5cb85c;--orange:#f0ad4e;--red:#d9534f;--purple:#ab47bc;
-  --mono:'Cascadia Code','Fira Code','JetBrains Mono','Consolas',monospace;
+  --bg:#0a0b0f;--surface:#131520;--surface2:#1a1d2b;--border:#252a3d;
+  --text:#e0e3eb;--dim:#7a8094;--accent:#4a9eff;--accent-glow:rgba(74,158,255,.15);
+  --green:#5cb85c;--orange:#f0ad4e;--purple:#ab47bc;
   --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --mono:'Cascadia Code','Fira Code','JetBrains Mono','Consolas',monospace;
 }
-html{font-size:14px}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden;height:100vh}
-canvas{display:block}
-::-webkit-scrollbar{width:8px;height:8px}
-::-webkit-scrollbar-track{background:var(--bg-panel)}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
-::-webkit-scrollbar-thumb:hover{background:var(--border-active)}
 
-/* === LAYOUT === */
-#app{display:grid;grid-template-rows:38px 1fr 24px;height:100vh}
+/* Hero */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden}
+.hero-bg{position:absolute;inset:0;z-index:0;opacity:.3}
+.hero-bg canvas{width:100%;height:100%}
+.hero-content{position:relative;z-index:1;max-width:800px;padding:2rem}
+.hero h1{font-size:4rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.5rem;
+  background:linear-gradient(135deg,var(--text) 0%,var(--accent) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero .tagline{font-size:1.2rem;color:var(--dim);margin-bottom:2rem;letter-spacing:.02em}
+.hero-badges{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-bottom:2rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .8rem;background:var(--surface);border:1px solid var(--border);border-radius:20px;font-size:.8rem;color:var(--dim)}
+.badge .dot{width:8px;height:8px;border-radius:50%}
+.badge .dot.green{background:var(--green);box-shadow:0 0 6px var(--green)}
+.badge .dot.orange{background:var(--orange)}
+.badge .dot.purple{background:var(--purple)}
 
-/* === MENUBAR === */
-#menubar{display:flex;align-items:center;gap:0;background:var(--bg-panel);border-bottom:1px solid var(--border);padding:0 8px;overflow:visible;white-space:nowrap;position:relative;z-index:100}
-.mb-item{position:relative;padding:0 12px;height:38px;display:flex;align-items:center;cursor:pointer;color:var(--text-dim);font-size:13px;transition:color .15s,background .15s}
-.mb-item:hover,.mb-item.open{color:var(--text-bright);background:var(--bg-panel-hover)}
-.mb-dropdown{display:none;position:absolute;top:100%;left:0;min-width:220px;background:var(--bg-panel);border:1px solid var(--border);border-radius:0 0 6px 6px;box-shadow:0 4px 16px rgba(0,0,0,.5);padding:4px 0;z-index:1000}
-.mb-item.open .mb-dropdown{display:block}
-.mb-dd-item{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;color:var(--text-dim);cursor:pointer;white-space:nowrap}
-.mb-dd-item:hover{background:var(--bg-panel-hover);color:var(--text-bright)}
-.mb-dd-item .dd-icon{width:18px;text-align:center;flex-shrink:0}
-.mb-dd-item .dd-shortcut{margin-left:auto;color:var(--text-dim);font-size:10px;opacity:.6}
-.mb-dd-sep{height:1px;background:var(--border);margin:4px 0}
-.mb-sep{width:1px;height:20px;background:var(--border);margin:0 4px}
-.mb-spacer{flex:1}
-.mb-right{color:var(--text-dim);font-size:12px;padding:0 12px;display:flex;align-items:center;gap:8px}
-.mb-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+/* Demo cards */
+.demos{padding:4rem 2rem;max-width:1100px;margin:0 auto}
+.section-title{font-size:1.8rem;font-weight:700;margin-bottom:1.5rem;text-align:center}
+.demo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.5rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:transform .2s,border-color .2s}
+.card:hover{transform:translateY(-4px);border-color:var(--accent)}
+.card-thumb{height:200px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--surface2)}
+.card-thumb canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.6}
+.card-thumb .icon{font-size:3rem;z-index:1}
+.card-body{padding:1.2rem}
+.card-body h3{font-size:1.2rem;font-weight:600;margin-bottom:.5rem}
+.card-body p{font-size:.9rem;color:var(--dim);margin-bottom:1rem}
+.card-tags{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:1rem}
+.tag{font-size:.7rem;padding:.2rem .6rem;background:var(--surface2);border-radius:4px;color:var(--dim)}
+.card-links{display:flex;gap:.5rem}
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1rem;border-radius:6px;font-size:.85rem;font-weight:500;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;transition:all .15s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{box-shadow:0 0 12px var(--accent-glow)}
 
-/* === MAIN === */
-#main{display:grid;grid-template-columns:1fr 300px;overflow:hidden}
-#viewport{position:relative;overflow:hidden;background:var(--bg)}
-#viewport canvas{position:absolute;top:0;left:0;width:100%;height:100%}
-#viewport-label{position:absolute;top:8px;left:8px;font-family:var(--mono);font-size:11px;color:var(--text-dim);z-index:10;pointer-events:none;text-shadow:0 0 4px var(--bg)}
-#viewport-stats{position:absolute;bottom:8px;left:8px;font-family:var(--mono);font-size:11px;color:var(--text-dim);z-index:10;pointer-events:none}
+/* PRs section */
+.prs{padding:4rem 2rem;max-width:800px;margin:0 auto}
+.pr-list{display:flex;flex-direction:column;gap:.8rem}
+.pr-item{display:flex;align-items:center;gap:1rem;padding:.8rem 1.2rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;transition:border-color .15s}
+.pr-item:hover{border-color:var(--accent)}
+.pr-status{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.pr-status.open{background:var(--green);box-shadow:0 0 6px var(--green)}
+.pr-status.merged{background:var(--purple)}
+.pr-status.draft{background:var(--orange)}
+.pr-number{font-family:var(--mono);font-size:.85rem;color:var(--dim);flex-shrink:0}
+.pr-title{flex:1;font-size:.9rem}
+.pr-link{font-family:var(--mono);font-size:.8rem;color:var(--accent)}
 
-#sidebar{background:var(--bg-panel);border-left:1px solid var(--border);overflow-y:auto;padding:8px}
+/* Stats */
+.stats{display:flex;justify-content:center;gap:3rem;padding:2rem;flex-wrap:wrap}
+.stat{text-align:center}
+.stat-value{font-size:2rem;font-weight:700;color:var(--accent)}
+.stat-label{font-size:.8rem;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
 
-#statusbar{display:flex;align-items:center;background:var(--bg-panel);border-top:1px solid var(--border);padding:0 12px;font-family:var(--mono);font-size:11px;color:var(--text-dim);gap:16px;overflow-x:auto;white-space:nowrap}
-
-/* === IMGUI-STYLE WIDGETS === */
-.win{background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;margin-bottom:8px;overflow:hidden}
-.win-header{display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text-bright);cursor:default}
-.win-body{padding:8px 10px;display:flex;flex-direction:column;gap:6px}
-.row{display:flex;align-items:center;gap:8px;min-height:20px}
-.label{font-size:12px;color:var(--text-dim);min-width:80px;flex-shrink:0}
-.value{font-family:var(--mono);font-size:12px;color:var(--text-bright)}
-.btn{display:inline-flex;align-items:center;justify-content:center;padding:5px 16px;background:var(--bg-panel-hover);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;cursor:pointer;transition:all .15s;user-select:none;font-family:var(--sans)}
-.btn:hover{border-color:var(--border-active);color:var(--text-bright)}
-.btn:active{background:var(--accent);color:#fff}
-.btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn-sm{padding:3px 10px;font-size:11px}
-.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text);user-select:none}
-.chk-box{width:16px;height:16px;border:1px solid var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;transition:all .15s}
-.chk.checked .chk-box{background:var(--accent);border-color:var(--accent)}
-.chk.checked .chk-box::after{content:'';width:8px;height:4px;border:1.5px solid #fff;border-top:none;border-right:none;transform:rotate(-45deg) translateY(-1px)}
-.chk:hover .chk-box{border-color:var(--border-active)}
-.slider{flex:1;height:20px;display:flex;align-items:center;position:relative;cursor:pointer}
-.slider-track{width:100%;height:4px;background:var(--bg-input);border-radius:2px;position:relative}
-.slider-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .05s}
-.slider-knob{position:absolute;top:50%;width:10px;height:20px;background:var(--bg-panel);border:1px solid var(--accent);border-radius:2px;transform:translate(-50%,-50%);transition:left .05s;box-shadow:0 0 4px var(--accent-glow)}
-.slider:hover .slider-knob{box-shadow:0 0 8px var(--accent-glow)}
-.combo{flex:1;display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:var(--bg-input);border:1px solid var(--border);border-radius:3px;font-size:12px;cursor:pointer;transition:border .15s}
-.combo:hover{border-color:var(--border-active)}
-.combo-arrow{color:var(--text-dim);font-size:10px}
-.tabbar{display:flex;gap:0;border-bottom:1px solid var(--border);margin:-8px -10px 4px}
-.tab{padding:6px 14px;font-size:12px;cursor:pointer;color:var(--text-dim);border-bottom:2px solid transparent;transition:all .15s}
-.tab:hover{color:var(--text)}
-.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-.color-swatch{width:14px;height:14px;border-radius:2px;border:1px solid var(--border);display:inline-block;cursor:pointer}
-.collab{cursor:pointer;display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-dim);padding:2px 0}
-.collab:hover{color:var(--text)}
-.collab .arrow{font-size:10px;transition:transform .15s}
-.collab.open .arrow{transform:rotate(90deg)}
-.tooltip{position:fixed;background:var(--bg-panel);border:1px solid var(--border-active);border-radius:4px;padding:4px 8px;font-size:11px;color:var(--text-bright);pointer-events:none;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,.4);max-width:250px}
-
-/* === ECHONATION VISUAL === */
-.echo-title{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;pointer-events:none;text-align:center;mix-blend-mode:screen}
-.echo-title h1{font-size:42px;font-weight:700;letter-spacing:.15em;color:rgba(232,234,240,.12);text-transform:uppercase}
-.echo-title p{font-size:13px;letter-spacing:.3em;color:rgba(232,234,240,.06);margin-top:4px;text-transform:uppercase}
-
-/* === HERO === */
-.hero-overlay{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;pointer-events:none;transition:opacity .8s}
-.hero-overlay.hidden{opacity:0;pointer-events:none}
-.hero-title{font-size:56px;font-weight:800;letter-spacing:.05em;color:var(--text-bright);text-shadow:0 0 30px var(--accent-glow);margin-bottom:8px}
-.hero-sub{font-size:16px;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase}
-.hero-credit{margin-top:24px;font-size:12px;color:var(--text-dim);letter-spacing:.05em}
-.hero-credit a{color:var(--accent);text-decoration:none}
-.hero-enter{margin-top:32px;pointer-events:auto;padding:10px 32px;background:rgba(74,158,255,.1);border:1px solid var(--accent);border-radius:4px;color:var(--accent);font-size:14px;cursor:pointer;transition:all .3s;letter-spacing:.1em;text-transform:uppercase;font-weight:600;font-family:var(--sans)}
-.hero-enter:hover{background:var(--accent);color:#fff;box-shadow:0 0 20px var(--accent-glow)}
-
-/* === DANCER OVERLAY === */
-.dancer-info{position:absolute;top:8px;right:8px;z-index:10;background:rgba(0,0,0,.6);border:1px solid var(--border);border-radius:4px;padding:6px 12px;font-size:11px;color:var(--text-dim);pointer-events:none}
-
-/* === SNACKBAR === */
-#snackbar{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:var(--bg-panel);border:1px solid var(--accent);color:var(--text-bright);padding:10px 24px;border-radius:6px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.4)}
-#snackbar.show{opacity:1}
+/* Footer */
+.footer{text-align:center;padding:3rem 2rem;color:var(--dim);font-size:.85rem;border-top:1px solid var(--border)}
+.footer a{color:var(--accent)}
 
 @media(max-width:768px){
-  #main{grid-template-columns:1fr}
-  #sidebar{display:none}
-  .hero-title{font-size:36px}
-  .echo-title h1{font-size:28px}
+  .hero h1{font-size:2.5rem}
+  .demo-grid{grid-template-columns:1fr}
+  .stats{gap:1.5rem}
 }
 </style>
 </head>
 <body>
-<div id="app">
-  <!-- MENUBAR -->
-  <div id="menubar">
-    <div class="mb-item" id="mb-file">
-      File
-      <div class="mb-dropdown">
-        <div class="mb-dd-item" onclick="enterDemo();closeMenu()"><span class="dd-icon">▶</span> Enter Demo<span class="dd-shortcut">Enter</span></div>
-        <div class="mb-dd-item" onclick="openPixelDemo()"><span class="dd-icon">📱</span> Open Pixel OS Demo<span class="dd-shortcut">Ctrl+P</span></div>
-        <div class="mb-dd-sep"></div>
-        <div class="mb-dd-item" onclick="screenshot()"><span class="dd-icon">📸</span> Screenshot<span class="dd-shortcut">Ctrl+S</span></div>
-        <div class="mb-dd-item" onclick="location.reload()"><span class="dd-icon">🔄</span> Reload<span class="dd-shortcut">Ctrl+R</span></div>
-      </div>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-bg"><canvas id="bg-canvas"></canvas></div>
+  <div class="hero-content">
+    <h1>imgui_xl</h1>
+    <p class="tagline">Dear ImGui XL — Enhanced community fork with backend improvements, sensors, and live demos</p>
+    <div class="hero-badges">
+      <span class="badge"><span class="dot green"></span> 3 PRs open upstream</span>
+      <span class="badge"><span class="dot orange"></span> Android + Vulkan fixes</span>
+      <span class="badge"><span class="dot purple"></span> Sensor + display support</span>
+      <span class="badge">MIT License</span>
     </div>
-    <div class="mb-item" id="mb-edit">
-      Edit
-      <div class="mb-dropdown">
-        <div class="mb-dd-item" onclick="randomize();closeMenu()"><span class="dd-icon">🎲</span> Randomize<span class="dd-shortcut">R</span></div>
-        <div class="mb-dd-item" onclick="pulse();closeMenu()"><span class="dd-icon">💥</span> Pulse<span class="dd-shortcut">P</span></div>
-        <div class="mb-dd-item" onclick="resetState();closeMenu()"><span class="dd-icon">♻</span> Reset to Defaults</div>
-      </div>
-    </div>
-    <div class="mb-item" id="mb-view">
-      View
-      <div class="mb-dropdown">
-        <div class="mb-dd-item" onclick="setMode(0);closeMenu()"><span class="dd-icon">🌊</span> Ripple Rings</div>
-        <div class="mb-dd-item" onclick="setMode(1);closeMenu()"><span class="dd-icon">📊</span> Spectrum Wave</div>
-        <div class="mb-dd-item" onclick="setMode(2);closeMenu()"><span class="dd-icon">✨</span> Particle Field</div>
-        <div class="mb-dd-item" onclick="setMode(3);closeMenu()"><span class="dd-icon">🔷</span> Voronoi Shimmer</div>
-        <div class="mb-dd-item" onclick="setMode(4);closeMenu()"><span class="dd-icon">🌀</span> Plasma Flow</div>
-        <div class="mb-dd-item" onclick="setMode(5);closeMenu()"><span class="dd-icon">🩰</span> Dancer Motion</div>
-        <div class="mb-dd-sep"></div>
-        <div class="mb-dd-item" onclick="toggleEchonation();closeMenu()"><span class="dd-icon">⏯</span> Toggle Visual<span class="dd-shortcut">Space</span></div>
-        <div class="mb-dd-item" onclick="toggleSidebar();closeMenu()"><span class="dd-icon">↔</span> Toggle Sidebar<span class="dd-shortcut">Ctrl+H</span></div>
-      </div>
-    </div>
-    <div class="mb-item" id="mb-demo">
-      Demo
-      <div class="mb-dropdown">
-        <div class="mb-dd-item" onclick="cycleMode();closeMenu()"><span class="dd-icon">🔄</span> Cycle Mode<span class="dd-shortcut">Tab</span></div>
-        <div class="mb-dd-item" onclick="openPixelDemo()"><span class="dd-icon">📱</span> Pixel OS Demo</div>
-        <div class="mb-dd-item" onclick="window.open('https://turtle-pb.github.io/OwlLogic/','_blank')"><span class="dd-icon">🦉</span> OwlLogics App</div>
-      </div>
-    </div>
-    <div class="mb-item" id="mb-tools">
-      Tools
-      <div class="mb-dropdown">
-        <div class="mb-dd-item" onclick="randomize();closeMenu()"><span class="dd-icon">🎲</span> Randomize</div>
-        <div class="mb-dd-item" onclick="pulse();closeMenu()"><span class="dd-icon">💥</span> Pulse</div>
-        <div class="mb-dd-sep"></div>
-        <div class="mb-dd-item" onclick="window.open('https://github.com/Turtle-PB/imgui_xl','_blank')"><span class="dd-icon">📂</span> GitHub Repo</div>
-        <div class="mb-dd-item" onclick="window.open('https://github.com/ocornut/imgui','_blank')"><span class="dd-icon">⬆</span> Upstream ImGui</div>
-      </div>
-    </div>
-    <div class="mb-sep"></div>
-    <div class="mb-item" id="mb-about">
-      About
-      <div class="mb-dropdown">
-        <div class="mb-dd-item" onclick="showAbout();closeMenu()"><span class="dd-icon">ℹ</span> About imgui_xl</div>
-        <div class="mb-dd-item" onclick="window.open('https://youtube.com/@echonationmusic','_blank')"><span class="dd-icon">🎵</span> Echonation Music</div>
-        <div class="mb-dd-item" onclick="window.open('https://github.com/Turtle-PB','_blank')"><span class="dd-icon">🐙</span> Turtle-PB</div>
-      </div>
-    </div>
-    <div class="mb-spacer"></div>
-    <div class="mb-right">
-      <span class="mb-dot"></span>
-      <span id="mb-fps">60.0 FPS</span>
-      <span>|</span>
-      <span id="mb-frames">0 frames</span>
-    </div>
+    <a href="#demos" style="font-size:2rem;color:var(--dim);text-decoration:none;animation:bounce 2s infinite">▼</a>
   </div>
+</div>
+<style>@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}</style>
 
-  <!-- MAIN AREA -->
-  <div id="main">
-    <!-- VIEWPORT (Canvas) -->
-    <div id="viewport">
-      <canvas id="canvas"></canvas>
-      <div id="viewport-label">## Viewport — Echonation Visual [DockSpace]</div>
-      <div id="viewport-stats">
-        <div>Draw: <span id="stat-draws">0</span> cmds</div>
-        <div>Verts: <span id="stat-verts">0</span></div>
-        <div>Particles: <span id="stat-particles">0</span></div>
+<!-- Stats -->
+<div class="stats">
+  <div class="stat"><div class="stat-value">3</div><div class="stat-label">Upstream PRs</div></div>
+  <div class="stat"><div class="stat-value">8</div><div class="stat-label">Sensor Types</div></div>
+  <div class="stat"><div class="stat-value">5</div><div class="stat-label">Visual Modes</div></div>
+  <div class="stat"><div class="stat-value">0</div><div class="stat-label">Binaries Added</div></div>
+</div>
+
+<!-- Demos -->
+<div class="demos" id="demos">
+  <h2 class="section-title">Live Demos</h2>
+  <div class="demo-grid">
+
+    <!-- Echonation Demo -->
+    <div class="card">
+      <div class="card-thumb">
+        <canvas id="echo-thumb"></canvas>
+        <div class="icon">🌊</div>
       </div>
-      <div class="hero-overlay" id="hero">
-        <div class="hero-title">imgui_xl</div>
-        <div class="hero-sub">Dear ImGui XL — Enhanced Community Fork</div>
-        <div class="hero-credit">
-          Echonation visuals by <a href="https://youtube.com/@echonationmusic" target="_blank">@Echonation</a> · 
-          Fork by <a href="https://github.com/Turtle-PB" target="_blank">Turtle-PB</a>
+      <div class="card-body">
+        <h3>Echonation Visual</h3>
+        <p>Audio-reactive canvas demo with 5 visual modes: Ripple Rings, Spectrum Wave, Particle Field, Voronoid Shimmer, and Plasma Flow. Inspired by Echonation.</p>
+        <div class="card-tags">
+          <span class="tag">Canvas 2D</span><span class="tag">60 FPS</span><span class="tag">No deps</span><span class="tag">Interactive</span>
         </div>
-        <button class="hero-enter" onclick="enterDemo()">Enter Demo ▸</button>
-      </div>
-      <div class="echo-title" id="echo-title" style="opacity:0">
-        <h1>Echonation</h1>
-        <p>Sound · Waveform · Resonance</p>
-      </div>
-      <div class="dancer-info" id="dancerInfo" style="display:none">🩰 Dancer Motion — hyper-realistic skeletal animation</div>
-    </div>
-
-    <!-- SIDEBAR -->
-    <div id="sidebar">
-      <!-- Visual Control Window -->
-      <div class="win">
-        <div class="win-header">⚙ Visual Controls</div>
-        <div class="win-body">
-          <div class="tabbar">
-            <div class="tab active" onclick="switchTab(event,'echo')">Echonation</div>
-            <div class="tab" onclick="switchTab(event,'imgui')">ImGui Demo</div>
-          </div>
-          <div id="tab-echo">
-            <div class="row"><span class="label">Mode</span>
-              <div class="combo" onclick="cycleMode()">
-                <span id="mode-label">Ripple Rings</span><span class="combo-arrow">▼</span>
-              </div>
-            </div>
-            <div class="row"><span class="label">Intensity</span>
-              <div class="slider" data-value="0.7"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
-            </div>
-            <div class="row"><span class="label">Speed</span>
-              <div class="slider" data-value="0.5"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
-            </div>
-            <div class="row"><span class="label">Hue Shift</span>
-              <div class="slider" data-value="0.5"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
-            </div>
-            <div class="row"><span class="label">Particles</span><span class="value" id="val-particles">512</span></div>
-            <div class="row" style="gap:4px">
-              <button class="btn btn-sm" onclick="toggleEchonation()">Toggle</button>
-              <button class="btn btn-sm" onclick="pulse()">Pulse</button>
-              <button class="btn btn-sm" onclick="randomize()">Randomize</button>
-            </div>
-          </div>
-          <div id="tab-imgui" style="display:none">
-            <div class="collab open" onclick="toggleCollapsible(this)"><span class="arrow">▸</span> Window Options</div>
-            <div class="win-body">
-              <div class="chk checked" onclick="this.classList.toggle('checked')"><span class="chk-box"></span> Show Title Bar</div>
-              <div class="chk checked" onclick="this.classList.toggle('checked')"><span class="chk-box"></span> No Resize</div>
-              <div class="chk" onclick="this.classList.toggle('checked')"><span class="chk-box"></span> No Move</div>
-              <div class="chk checked" onclick="this.classList.toggle('checked')"><span class="chk-box"></span> Auto Resize</div>
-            </div>
-            <div class="collab open" onclick="toggleCollapsible(this)"><span class="arrow">▸</span> Style Editor</div>
-            <div class="win-body">
-              <div class="row"><span class="label">Alpha</span><div class="slider" data-value="0.95"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div></div>
-              <div class="row"><span class="label">Win Round</span><div class="slider" data-value="0.3"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div></div>
-              <div class="row"><span class="label">Frame Round</span><div class="slider" data-value="0.2"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div></div>
-              <div class="row" style="gap:4px;flex-wrap:wrap">
-                <span class="color-swatch" style="background:#4a9eff" title="Accent"></span>
-                <span class="color-swatch" style="background:#5cb85c" title="Success"></span>
-                <span class="color-swatch" style="background:#f0ad4e" title="Warning"></span>
-                <span class="color-swatch" style="background:#d9534f" title="Danger"></span>
-                <span class="color-swatch" style="background:#ab47bc" title="Purple"></span>
-                <span class="color-swatch" style="background:#e8eaf0" title="Text"></span>
-              </div>
-            </div>
-            <div class="collab" onclick="toggleCollapsible(this)"><span class="arrow">▸</span> Demo Widgets</div>
-            <div class="win-body" style="display:none">
-              <button class="btn btn-sm" onclick="toggleEchonation()">Toggle Visual</button>
-              <div class="row"><span class="label">Counter</span><span class="value" id="imgui-counter">0</span></div>
-              <button class="btn btn-sm" onclick="document.getElementById('imgui-counter').textContent=parseInt(document.getElementById('imgui-counter').textContent)+1">Increment</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Stats Window -->
-      <div class="win">
-        <div class="win-header">📊 Metrics</div>
-        <div class="win-body">
-          <div class="row"><span class="label">FPS</span><span class="value" id="stat-fps">60.0</span></div>
-          <div class="row"><span class="label">Frame Time</span><span class="value" id="stat-ms">16.67ms</span></div>
-          <div class="row"><span class="label">Vertices</span><span class="value" id="stat-verts2">0</span></div>
-          <div class="row"><span class="label">Draw Calls</span><span class="value" id="stat-draws2">0</span></div>
-          <div class="row"><span class="label">Input Events</span><span class="value" id="stat-events">0</span></div>
-          <div class="row"><span class="label">Allocated</span><span class="value" id="stat-alloc">0 KB</span></div>
-        </div>
-      </div>
-
-      <!-- About Window -->
-      <div class="win">
-        <div class="win-header">ℹ About imgui_xl</div>
-        <div class="win-body">
-          <p style="font-size:12px;color:var(--text);line-height:1.5">Enhanced community fork of <strong style="color:var(--accent)">Dear ImGui</strong> — the bloat-free immediate-mode GUI for C++.</p>
-          <div class="row"><span class="label">Upstream</span><a href="https://github.com/ocornut/imgui" style="color:var(--accent);font-size:12px;text-decoration:none">ocornut/imgui</a></div>
-          <div class="row"><span class="label">Fork</span><a href="https://github.com/Turtle-PB/imgui_xl" style="color:var(--accent);font-size:12px;text-decoration:none">Turtle-PB/imgui_xl</a></div>
-          <div class="row"><span class="label">License</span><span class="value" style="font-size:11px">MIT</span></div>
-          <div class="row"><span class="label">Version</span><span class="value" style="font-size:11px">1.92.6 (docking)</span></div>
-          <div style="margin-top:4px;padding-top:6px;border-top:1px solid var(--border);font-size:11px;color:var(--text-dim);line-height:1.4">
-            Echonation visuals by <a href="https://youtube.com/@echonationmusic" style="color:var(--accent);text-decoration:none">@Echonation</a>.<br>
-            Fork by <a href="https://github.com/Turtle-PB" style="color:var(--accent);text-decoration:none">Paul Adcock</a> (Turtle-PB).<br>
-            Pixel OS Demo + Dancer Motion added v1.0.
-          </div>
+        <div class="card-links">
+          <a href="echonation.html" class="btn primary">▶ Launch Demo</a>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- STATUS BAR -->
-  <div id="statusbar">
-    <span>imgui_xl v1.92.6-docking</span>
-    <span>|</span>
-    <span id="sb-mode">Mode: Ripple Rings</span>
-    <span>|</span>
-    <span id="sb-mouse">Mouse: (0, 0)</span>
-    <span>|</span>
-    <span id="sb-time">00:00:00</span>
-    <span style="flex:1"></span>
-    <span style="color:var(--green)">● Connected</span>
-    <span>GL ES 3.0 / WebGL2</span>
+    <!-- Pixel OS Demo -->
+    <div class="card">
+      <div class="card-thumb" style="background:linear-gradient(135deg,#1a1d2b 0%,#0d1922 100%)">
+        <div class="icon" style="font-size:3rem">📱</div>
+      </div>
+      <div class="card-body">
+        <h3>Pixel OS Model</h3>
+        <p>Interactive Pixel 8 Pro phone simulator with lock screen, home screen, 7 functional apps, quick settings, dark mode, and gesture support.</p>
+        <div class="card-tags">
+          <span class="tag">Material You</span><span class="tag">Touch</span><span class="tag">Dark Mode</span><span class="tag">Theming</span>
+        </div>
+        <div class="card-links">
+          <a href="pixel_os_demo.html" class="btn primary">▶ Launch Demo</a>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
-<div id="snackbar"></div>
+<!-- PRs -->
+<div class="prs">
+  <h2 class="section-title">Upstream Contributions</h2>
+  <div class="pr-list">
+    <a href="https://github.com/ocornut/imgui/pull/9467" class="pr-item" style="text-decoration:none;color:inherit">
+      <div class="pr-status open"></div>
+      <span class="pr-number">#9467</span>
+      <span class="pr-title">Android CI: Pin Gradle 9.4.1 via setup-gradle action for AGP 9.2.0</span>
+      <span class="pr-link">→</span>
+    </a>
+    <a href="https://github.com/ocornut/imgui/pull/9468" class="pr-item" style="text-decoration:none;color:inherit">
+      <div class="pr-status open"></div>
+      <span class="pr-number">#9468</span>
+      <span class="pr-title">Vulkan: Fixed use-after-free in multi-viewport dynamic rendering</span>
+      <span class="pr-link">→</span>
+    </a>
+    <a href="https://github.com/ocornut/imgui/pull/9469" class="pr-item" style="text-decoration:none;color:inherit">
+      <div class="pr-status open"></div>
+      <span class="pr-number">#9469</span>
+      <span class="pr-title">Android: Move JNI keyboard/clipboard into backend, add sensors + display</span>
+      <span class="pr-link">→</span>
+    </a>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <p><strong>imgui_xl</strong> — Fork of <a href="https://github.com/ocornut/imgui">Dear ImGui</a> by <a href="https://github.com/Turtle-PB">Turtle-PB</a></p>
+  <p style="margin-top:.5rem">Echonation visuals inspired by <a href="https://youtube.com/@echonationmusic">@Echonation</a> · MIT License · <a href="https://github.com/Turtle-PB/imgui_xl">GitHub</a></p>
+</div>
 
 <script>
-// === STATE ===
-const state = {
-  running:false, echoActive:true, mode:0,
-  modes:['Ripple Rings','Spectrum Wave','Particle Field','Voronoi Shimmer','Plasma Flow','Dancer Motion'],
-  intensity:0.7, speed:1.0, hueShift:0.5,
-  particleCount:512, particles:[], ripples:[],
-  mouseX:0, mouseY:0, frame:0, fps:60, frameTime:16.67,
-  drawCalls:0, vertices:0, inputEvents:0, startTime:0, allocatedKB:0,
-};
-
-// === CANVAS SETUP ===
-const canvas=document.getElementById('canvas');
-const ctx=canvas.getContext('2d');
-let W=0,H=0,DPR=window.devicePixelRatio||1;
-// Offscreen canvas for plasma (fixes self-copy bug)
-const offCanvas=document.createElement('canvas');
-const offCtx=offCanvas.getContext('2d');
-
-function resize(){
-  const vp=document.getElementById('viewport');
-  W=vp.clientWidth;H=vp.clientHeight;
-  canvas.width=W*DPR;canvas.height=H*DPR;
-  canvas.style.width=W+'px';canvas.style.height=H+'px';
-  ctx.setTransform(DPR,0,0,DPR,0,0);
-  offCanvas.width=Math.max(1,W);offCanvas.height=Math.max(1,H);
-}
-window.addEventListener('resize',resize);resize();
-
-// === PARTICLES ===
-function initParticles(n){
-  state.particles=[];
-  for(let i=0;i<n;i++){
-    state.particles.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5,life:Math.random(),size:Math.random()*2+.5,hue:Math.random()*360});
-  }
-}
-initParticles(state.particleCount);
-
-// === AUDIO ANALYSIS (simulated) ===
-let audioData=new Float32Array(256);
-let audioEnergy=0,audioBass=0,audioMid=0,audioHigh=0;
-function simulateAudio(t){
-  audioEnergy=(Math.sin(t*2.4)*.5+.5)*state.intensity;
-  audioBass=(Math.sin(t*.8)*.7+.3)*state.intensity;
-  audioMid=(Math.sin(t*3.1)*.4+.4)*state.intensity;
-  audioHigh=(Math.sin(t*7.2)*.3+.2)*state.intensity;
-  for(let i=0;i<256;i++)audioData[i]=(Math.sin(t*(1+i*.02)+i*.1)*.5+.5)*audioEnergy;
-}
-
-// === RENDER MODE 0: Ripple Rings ===
-function renderRippleRings(t){
-  ctx.fillStyle='rgba(13,14,18,'+(.05+.02*(1-state.intensity))+')';
-  ctx.fillRect(0,0,W,H);
-  const cx=W/2,cy=H/2,rings=12;
-  for(let i=0;i<rings;i++){
-    const phase=(t*state.speed*.5+i/rings)%1;
-    const radius=phase*Math.min(W,H)*.6;
-    const alpha=(1-phase)*state.intensity*.6;
-    const hue=(i*30+t*60*state.hueShift)%360;
-    ctx.beginPath();
-    ctx.arc(cx,cy,Math.max(1,radius),0,Math.PI*2);
-    ctx.strokeStyle=`hsla(${hue},80%,60%,${alpha})`;
-    ctx.lineWidth=2+audioBass*4;
-    ctx.stroke();
-  }
-  const pulseR=20+audioEnergy*60;
-  const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(1,pulseR));
-  grad.addColorStop(0,`hsla(${(t*120*state.hueShift)%360},80%,70%,${.4*state.intensity})`);
-  grad.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=grad;
-  ctx.fillRect(cx-pulseR,cy-pulseR,pulseR*2,pulseR*2);
-  state.drawCalls=rings+1;state.vertices=(rings+1)*128;
-}
-
-// === RENDER MODE 1: Spectrum Wave ===
-function renderSpectrumWave(t){
-  ctx.fillStyle='rgba(13,14,18,0.08)';
-  ctx.fillRect(0,0,W,H);
-  const bars=96,barW=W/bars;
-  for(let i=0;i<bars;i++){
-    const v=audioData[Math.floor(i/bars*256)]||0;
-    const h=v*H*.35*state.intensity;
-    const x=i*barW,y=H/2-h;
-    const hue=(i/bars*360+t*30*state.hueShift)%360;
-    const grad=ctx.createLinearGradient(0,y,0,y+h*2);
-    grad.addColorStop(0,`hsla(${hue},85%,65%,0.9)`);
-    grad.addColorStop(.5,`hsla(${hue},80%,50%,0.6)`);
-    grad.addColorStop(1,`hsla(${hue},70%,30%,0.1)`);
-    ctx.fillStyle=grad;
-    ctx.fillRect(x+1,y,Math.max(1,barW-2),Math.max(1,h*2));
-  }
-  ctx.beginPath();
-  for(let i=0;i<=W;i+=4){
-    const v=audioData[Math.floor(i/W*256)]||0;
-    const y=H/2+Math.sin(i*.02+t*3*state.speed)*40*audioMid+v*20;
-    if(i===0)ctx.moveTo(i,y);else ctx.lineTo(i,y);
-  }
-  ctx.strokeStyle=`hsla(${(t*100*state.hueShift)%360},90%,70%,${state.intensity})`;
-  ctx.lineWidth=1.5;ctx.stroke();
-  state.drawCalls=bars+1;state.vertices=bars*6+W/2;
-}
-
-// === RENDER MODE 2: Particle Field ===
-function renderParticleField(t){
-  ctx.fillStyle='rgba(13,14,18,0.06)';
-  ctx.fillRect(0,0,W,H);
-  const count=state.particles.length;
-  for(let i=0;i<count;i++){
-    const p=state.particles[i];
-    p.x+=p.vx*state.speed*(1+audioEnergy*2);
-    p.y+=p.vy*state.speed*(1+audioEnergy*2);
-    p.life-=.003*state.speed;
-    if(p.life<=0||p.x<0||p.x>W||p.y<0||p.y>H){
-      p.x=Math.random()*W;p.y=Math.random()*H;
-      p.vx=(Math.random()-.5)*.5;p.vy=(Math.random()-.5)*.5;
-      p.life=1;p.size=Math.random()*2+.5;
-    }
-    for(let j=i+1;j<Math.min(i+8,count);j++){
-      const p2=state.particles[j];
-      const dx=p.x-p2.x,dy=p.y-p2.y,dist=dx*dx+dy*dy;
-      if(dist<6400){
-        const a=(1-dist/6400)*state.intensity*.3;
-        const hue=(p.hue+t*20*state.hueShift)%360;
-        ctx.strokeStyle=`hsla(${hue},70%,55%,${a})`;
-        ctx.lineWidth=.5;
-        ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
-      }
-    }
-    const hue=(p.hue+t*30*state.hueShift)%360;
-    ctx.fillStyle=`hsla(${hue},80%,60%,${p.life*state.intensity*.8})`;
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,Math.max(.5,p.size*(1+audioBass)),0,Math.PI*2);
-    ctx.fill();
-  }
-  state.drawCalls=count;state.vertices=count*4;
-}
-
-// === RENDER MODE 3: Voronoi Shimmer (FIXED: j scope bug) ===
-function renderVoronoiShimmer(t){
-  ctx.fillStyle='rgba(13,14,18,0.04)';
-  ctx.fillRect(0,0,W,H);
-  const cells=8,cw=W/cells,ch=H/cells;
-  for(let i=0;i<cells;i++){
-    for(let j=0;j<cells;j++){
-      const x=i*cw+cw/2+Math.sin(t*state.speed+i*.5+j*.3)*30*state.intensity;
-      const y=j*ch+ch/2+Math.cos(t*state.speed+i*.3+j*.5)*30*state.intensity;
-      const r=30+audioMid*60+Math.sin(t*2+i+j)*20;
-      const hue=((i+j)*45+t*40*state.hueShift)%360;
-      const grad=ctx.createRadialGradient(x,y,0,x,y,Math.max(1,r));
-      grad.addColorStop(0,`hsla(${hue},75%,55%,${.15*state.intensity})`);
-      grad.addColorStop(.5,`hsla(${hue},65%,40%,${.08*state.intensity})`);
-      grad.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=grad;
-      ctx.fillRect(x-r,y-r,r*2,r*2);
-    }
-  }
-  // Grid lines — FIXED: iterate properly over both i and j
-  ctx.strokeStyle=`rgba(74,158,255,${.1*state.intensity})`;
-  ctx.lineWidth=.5;
-  for(let i=1;i<cells;i++){ctx.beginPath();ctx.moveTo(i*cw,0);ctx.lineTo(i*cw,H);ctx.stroke();}
-  for(let j=1;j<cells;j++){ctx.beginPath();ctx.moveTo(0,j*ch);ctx.lineTo(W,j*ch);ctx.stroke();}
-  state.drawCalls=cells*cells;state.vertices=cells*cells*4;
-}
-
-// === RENDER MODE 4: Plasma Flow (FIXED: offscreen canvas, no self-copy) ===
-function renderPlasmaFlow(t){
-  const scale=4;
-  const sw=Math.max(1,Math.floor(W/scale)),sh=Math.max(1,Math.floor(H/scale));
-  offCanvas.width=sw;offCanvas.height=sh;
-  const imageData=offCtx.createImageData(sw,sh);
-  const data=imageData.data;
-  for(let y=0;y<sh;y++){
-    for(let x=0;x<sw;x++){
-      const i=(y*sw+x)*4;
-      const fx=x/sw,fy=y/sh;
-      const v=Math.sin(fx*8+t*state.speed)+Math.sin(fy*6+t*state.speed*.7)+Math.sin((fx+fy)*7+t*state.speed*1.3)+Math.sin(Math.sqrt((fx-.5)**2+(fy-.5)**2)*12+t*state.speed*2);
-      const norm=(v+4)/8;
-      const hue=(norm*360+t*60*state.hueShift)%360;
-      const rgb=hslToRgb(hue,.7,.5*state.intensity+.15);
-      data[i]=rgb[0];data[i+1]=rgb[1];data[i+2]=rgb[2];data[i+3]=255;
-    }
-  }
-  offCtx.putImageData(imageData,0,0);
-  ctx.fillStyle='rgba(13,14,18,0.15)';
-  ctx.fillRect(0,0,W,H);
-  ctx.imageSmoothingEnabled=true;
-  ctx.drawImage(offCanvas,0,0,sw,sh,0,0,W,H);
-  state.drawCalls=2;state.vertices=sw*sh;
-}
-
-// === RENDER MODE 5: Dancer Motion (hyper-realistic skeletal animation) ===
-let dancers = [];
-function initDancers() {
-  dancers = [];
-  const numDancers = 5;
-  const colors = [
-    {skin:'#d4a373',shirt:'#4a9eff',pants:'#2a2d3a',hair:'#3e2723'},
-    {skin:'#e0b088',shirt:'#5cb85c',pants:'#1a1a2e',hair:'#5d4037'},
-    {skin:'#c8956b',shirt:'#f0ad4e',pants:'#2c3e50',hair:'#212121'},
-    {skin:'#d4a373',shirt:'#ab47bc',pants:'#1c1f2b',hair:'#4e342e'},
-    {skin:'#e0b088',shirt:'#e74c3c',pants:'#0d0e12',hair:'#3e2723'},
-  ];
-  for (let i = 0; i < numDancers; i++) {
-    dancers.push({
-      x: W * (0.15 + 0.7 * i / (numDancers-1)),
-      y: H * 0.55,
-      phase: i * 0.7,
-      color: colors[i % colors.length],
-      scale: 0.8 + Math.random() * 0.4,
-      beatOffset: i * 0.15,
-    });
-  }
-}
-initDancers();
-
-function renderDancerMotion(t){
-  // Dark club background with pulsing lights
-  ctx.fillStyle='rgba(8,6,12,0.15)';
-  ctx.fillRect(0,0,W,H);
-
-  // Floor reflection
-  const floorY = H * 0.78;
-  const floorGrad = ctx.createLinearGradient(0, floorY, 0, H);
-  floorGrad.addColorStop(0, 'rgba(20,10,30,0.3)');
-  floorGrad.addColorStop(1, 'rgba(8,6,12,0.05)');
-  ctx.fillStyle = floorGrad;
-  ctx.fillRect(0, floorY, W, H - floorY);
-
-  // Spotlights (beat-synchronized)
-  const beat = Math.sin(t * 2.4 * state.speed) * 0.5 + 0.5;
-  for (let i = 0; i < 3; i++) {
-    const lx = W * (0.2 + 0.3 * i);
-    const ly = 0;
-    const lr = 80 + beat * 60 + audioBass * 80;
-    const hue = (t * 60 * state.hueShift + i * 120) % 360;
-    const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, Math.max(1, lr * 2));
-    grad.addColorStop(0, `hsla(${hue},80%,60%,${0.08 * state.intensity})`);
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(lx - lr*2, 0, lr*4, lr*2);
-  }
-
-  // Beat energy
-  const energy = beat * state.intensity;
-
-  // Draw each dancer
-  for (let d = 0; d < dancers.length; d++) {
-    const dn = dancers[d];
-    const beatT = t * state.speed + dn.beatOffset;
-    const bounce = Math.abs(Math.sin(beatT * 2.4)) * 15 * state.intensity;
-    const sway = Math.sin(beatT * 1.2) * 20 * state.intensity;
-    const armWave = Math.sin(beatT * 2.4 + dn.phase) * 0.8;
-    const armWave2 = Math.sin(beatT * 2.4 + dn.phase + 1) * 0.8;
-    const legLift = Math.max(0, Math.sin(beatT * 2.4 + dn.phase + 2)) * 25 * state.intensity;
-    const headBob = Math.sin(beatT * 2.4) * 5;
-    const bodyLean = Math.sin(beatT * 1.2) * 0.15;
-    const hipSway = Math.sin(beatT * 2.4) * 8 * state.intensity;
-
-    const cx = dn.x + sway;
-    const cy = dn.y - bounce;
-    const s = dn.scale * (1 + energy * 0.1);
-
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(bodyLean);
-    ctx.scale(s, s);
-
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath();
-    ctx.ellipse(0, 90 + bounce/s, 25, 6, 0, 0, Math.PI*2);
-    ctx.fill();
-
-    // --- LEGS ---
-    const legLen = 45;
-    const hipY = 30;
-    // Left leg
-    ctx.strokeStyle = dn.color.pants;
-    ctx.lineWidth = 10;
-    ctx.lineCap = 'round';
-    const lLegAng = legLift * 0.02;
-    ctx.beginPath();
-    ctx.moveTo(-hipSway, hipY);
-    ctx.quadraticCurveTo(-hipSway - 5, hipY + legLen*0.5, -hipSway - Math.sin(lLegAng)*legLen*0.3, hipY + legLen - Math.abs(Math.sin(beatT*2.4+1))*legLift*0.3);
-    ctx.stroke();
-    // Right leg
-    const rLegAng = -legLift * 0.02;
-    ctx.beginPath();
-    ctx.moveTo(hipSway, hipY);
-    ctx.quadraticCurveTo(hipSway + 5, hipY + legLen*0.5, hipSway + Math.sin(rLegAng)*legLen*0.3, hipY + legLen);
-    ctx.stroke();
-
-    // --- TORSO ---
-    const torsoH = 35;
-    const torsoW = 22;
-    ctx.fillStyle = dn.color.shirt;
-    ctx.beginPath();
-    ctx.moveTo(-torsoW/2, -torsoH + hipY);
-    ctx.lineTo(torsoW/2, -torsoH + hipY);
-    ctx.lineTo(torsoW/2 + 2, hipY);
-    ctx.lineTo(-torsoW/2 - 2, hipY);
-    ctx.closePath();
-    ctx.fill();
-
-    // Shirt highlight
-    ctx.fillStyle = `hsla(${(t*60*state.hueShift+dn.phase*60)%360},60%,70%,${0.15*energy})`;
-    ctx.beginPath();
-    ctx.moveTo(-torsoW/2, -torsoH + hipY);
-    ctx.lineTo(-torsoW/4, -torsoH + hipY);
-    ctx.lineTo(-torsoW/4, hipY);
-    ctx.lineTo(-torsoW/2 - 2, hipY);
-    ctx.closePath();
-    ctx.fill();
-
-    // --- ARMS ---
-    ctx.strokeStyle = dn.color.skin;
-    ctx.lineWidth = 7;
-    ctx.lineCap = 'round';
-    const armLen = 30;
-    // Left arm (raised, waving)
-    const lShoulderY = -torsoH + hipY + 5;
-    const lElbowX = -torsoW/2 - 5 + Math.cos(armWave) * 15;
-    const lElbowY = lShoulderY + Math.sin(armWave) * 10 + 10;
-    const lHandX = lElbowX + Math.cos(armWave + 0.5) * 18;
-    const lHandY = lElbowY + Math.sin(armWave + 0.5) * 18 - energy * 20;
-    ctx.beginPath();
-    ctx.moveTo(-torsoW/2, lShoulderY);
-    ctx.quadraticCurveTo(lElbowX, lElbowY, lHandX, lHandY);
-    ctx.stroke();
-    // Right arm
-    const rShoulderY = -torsoH + hipY + 5;
-    const rElbowX = torsoW/2 + 5 + Math.cos(armWave2) * 15;
-    const rElbowY = rShoulderY + Math.sin(armWave2) * 10 + 10;
-    const rHandX = rElbowX + Math.cos(armWave2 + 0.5) * 18;
-    const rHandY = rElbowY + Math.sin(armWave2 + 0.5) * 18 - energy * 20;
-    ctx.beginPath();
-    ctx.moveTo(torsoW/2, rShoulderY);
-    ctx.quadraticCurveTo(rElbowX, rElbowY, rHandX, rHandY);
-    ctx.stroke();
-
-    // --- NECK & HEAD ---
-    const neckY = -torsoH + hipY - 3;
-    const headY = neckY - 12 + headBob;
-    ctx.strokeStyle = dn.color.skin;
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(0, neckY);
-    ctx.lineTo(0, headY + 5);
-    ctx.stroke();
-
-    // Head (oval)
-    ctx.fillStyle = dn.color.skin;
-    ctx.beginPath();
-    ctx.ellipse(0, headY, 10, 12, 0, 0, Math.PI*2);
-    ctx.fill();
-
-    // Hair
-    ctx.fillStyle = dn.color.hair;
-    ctx.beginPath();
-    ctx.ellipse(0, headY - 4, 11, 9, 0, Math.PI, Math.PI*2);
-    ctx.fill();
-    // Hair sides
-    ctx.beginPath();
-    ctx.ellipse(-8, headY - 1, 3, 6, -0.3, 0, Math.PI*2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(8, headY - 1, 3, 6, 0.3, 0, Math.PI*2);
-    ctx.fill();
-
-    // Face glow (beat)
-    if (energy > 0.5) {
-      ctx.fillStyle = `hsla(${(t*120*state.hueShift)%360},70%,70%,${(energy-0.5)*0.3})`;
+// Animated hero background — subtle ripple effect
+(function(){
+  const c = document.getElementById('bg-canvas');
+  const ctx = c.getContext('2d');
+  function resize(){c.width=c.offsetWidth;c.height=c.offsetHeight}
+  resize(); window.addEventListener('resize',resize);
+  let t=0;
+  function draw(){
+    t+=0.005;
+    ctx.fillStyle='rgba(10,11,15,0.05)';
+    ctx.fillRect(0,0,c.width,c.height);
+    const cx=c.width/2, cy=c.height/2;
+    for(let i=0;i<8;i++){
+      const p=(t*0.3+i/8)%1;
+      const r=p*Math.min(c.width,c.height)*0.4;
+      const a=(1-p)*0.4;
       ctx.beginPath();
-      ctx.ellipse(0, headY, 10, 12, 0, 0, Math.PI*2);
-      ctx.fill();
+      ctx.arc(cx,cy,Math.max(1,r),0,Math.PI*2);
+      ctx.strokeStyle=`hsla(${i*45+t*30},70%,55%,${a})`;
+      ctx.lineWidth=2;
+      ctx.stroke();
     }
-
-    ctx.restore();
+    requestAnimationFrame(draw);
   }
+  draw();
+})();
 
-  // Beat flash overlay
-  if (beat > 0.85) {
-    ctx.fillStyle = `hsla(${(t*180*state.hueShift)%360},50%,50%,${(beat-0.85)*0.15*state.intensity})`;
-    ctx.fillRect(0, 0, W, H);
+// Mini Echonation thumbnail animation
+(function(){
+  const c = document.getElementById('echo-thumb');
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  function resize(){c.width=c.offsetWidth;c.height=c.offsetHeight}
+  resize(); window.addEventListener('resize',resize);
+  let t=0;
+  const particles=[];
+  for(let i=0;i<30;i++) particles.push({x:Math.random()*c.width,y:Math.random()*c.height,vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5,hue:Math.random()*360,life:Math.random()});
+  function draw(){
+    t+=0.01;
+    ctx.fillStyle='rgba(19,21,32,0.08)';
+    ctx.fillRect(0,0,c.width,c.height);
+    const cx=c.width/2, cy=c.height/2;
+    for(let i=0;i<5;i++){
+      const p=(t+i/5)%1;
+      const r=p*Math.min(c.width,c.height)*0.3;
+      const a=(1-p)*0.5;
+      ctx.beginPath();
+      ctx.arc(cx,cy,Math.max(1,r),0,Math.PI*2);
+      ctx.strokeStyle=`hsla(${i*60+t*40},70%,55%,${a})`;
+      ctx.lineWidth=1.5;
+      ctx.stroke();
+    }
+    particles.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.life-=0.005;
+      if(p.life<=0||p.x<0||p.x>c.width||p.y<0||p.y>c.height){
+        p.x=Math.random()*c.width;p.y=Math.random()*c.height;p.vx=(Math.random()-.5)*.5;p.vy=(Math.random()-.5)*.5;p.life=1;
+      }
+      ctx.fillStyle=`hsla(${p.hue+t*20},70%,60%,${p.life*0.5})`;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,1.5,0,Math.PI*2);
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
   }
-
-  state.drawCalls = dancers.length * 8 + 3;
-  state.vertices = state.drawCalls * 64;
-}
-
-function hslToRgb(h,s,l){
-  h/=360;let r,g,b;
-  if(s===0){r=g=b=l;}
-  else{
-    const hue2rgb=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};
-    const q=l<.5?l*(1+s):l+s-l*s;const p=2*l-q;
-    r=hue2rgb(p,q,h+1/3);g=hue2rgb(p,q,h);b=hue2rgb(p,q,h-1/3);
-  }
-  return[Math.round(r*255),Math.round(g*255),Math.round(b*255)];
-}
-
-const renderFns=[renderRippleRings,renderSpectrumWave,renderParticleField,renderVoronoiShimmer,renderPlasmaFlow,renderDancerMotion];
-
-// === MAIN LOOP ===
-let lastTime=0,fpsAccum=0,fpsCount=0,fpsLast=0;
-function loop(timestamp){
-  const dt=(timestamp-lastTime)/1000;
-  lastTime=timestamp;
-  const t=(timestamp-state.startTime)/1000;
-  if(dt>0){fpsAccum+=1/dt;fpsCount++;if(timestamp-fpsLast>500){state.fps=fpsAccum/fpsCount;state.frameTime=dt*1000;fpsAccum=0;fpsCount=0;fpsLast=timestamp;}}
-  if(state.echoActive){
-    simulateAudio(t);
-    const fn=renderFns[state.mode];
-    if(fn)fn(t);
-  }else{
-    ctx.fillStyle='rgba(13,14,18,0.05)';
-    ctx.fillRect(0,0,W,H);
-  }
-  state.frame++;
-  updateStats();
-  requestAnimationFrame(loop);
-}
-
-function updateStats(){
-  const fs=state.fps.toFixed(1);
-  document.getElementById('mb-fps').textContent=fs+' FPS';
-  document.getElementById('mb-frames').textContent=state.frame+' frames';
-  document.getElementById('stat-fps').textContent=fs;
-  document.getElementById('stat-ms').textContent=state.frameTime.toFixed(2)+'ms';
-  document.getElementById('stat-draws').textContent=state.drawCalls;
-  document.getElementById('stat-draws2').textContent=state.drawCalls;
-  document.getElementById('stat-verts').textContent=state.vertices;
-  document.getElementById('stat-verts2').textContent=state.vertices;
-  document.getElementById('stat-particles').textContent=state.particles.length;
-  document.getElementById('val-particles').textContent=state.particles.length;
-  document.getElementById('stat-events').textContent=state.inputEvents;
-  state.allocatedKB=Math.round(state.particles.length*.05+state.frame*.001);
-  document.getElementById('stat-alloc').textContent=state.allocatedKB+' KB';
-  const elapsed=(Date.now()-state.startTime)/1000;
-  const h=Math.floor(elapsed/3600),m=Math.floor((elapsed%3600)/60),s=Math.floor(elapsed%60);
-  document.getElementById('sb-time').textContent=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
-  // Show/hide dancer info
-  document.getElementById('dancerInfo').style.display=state.mode===5?'block':'none';
-}
-
-// === UI INTERACTIONS ===
-function enterDemo(){
-  document.getElementById('hero').classList.add('hidden');
-  const et=document.getElementById('echo-title');
-  et.style.transition='opacity 2s';et.style.opacity='1';
-  setTimeout(()=>{et.style.opacity='0.15';},2000);
-  state.running=true;
-}
-function toggleEchonation(){state.echoActive=!state.echoActive;snack('Visual: '+(state.echoActive?'On':'Off'))}
-function pulse(){
-  for(let i=0;i<30;i++)state.particles.push({x:W/2,y:H/2,vx:(Math.random()-.5)*8,vy:(Math.random()-.5)*8,life:1,size:Math.random()*3+1,hue:Math.random()*360});
-  snack('💥 Pulse!');
-}
-function randomize(){
-  state.intensity=Math.random();state.speed=Math.random()*2+.3;state.hueShift=Math.random();
-  updateSliders();snack('🎲 Randomized!');
-}
-function setMode(m){
-  state.mode=m;
-  document.getElementById('mode-label').textContent=state.modes[m];
-  document.getElementById('sb-mode').textContent='Mode: '+state.modes[m];
-  if(m===5) initDancers();
-  snack('Mode: '+state.modes[m]);
-}
-function cycleMode(){setMode((state.mode+1)%state.modes.length)}
-function resetState(){
-  state.intensity=.7;state.speed=1;state.hueShift=.5;state.mode=0;
-  document.getElementById('mode-label').textContent=state.modes[0];
-  document.getElementById('sb-mode').textContent='Mode: '+state.modes[0];
-  initParticles(512);updateSliders();snack('♻ Reset to defaults');
-}
-function switchTab(e,tab){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  e.target.classList.add('active');
-  document.getElementById('tab-echo').style.display=tab==='echo'?'':'none';
-  document.getElementById('tab-imgui').style.display=tab==='imgui'?'':'none';
-}
-function toggleCollapsible(el){
-  el.classList.toggle('open');
-  const body=el.nextElementSibling;
-  if(body)body.style.display=body.style.display==='none'?'':'none';
-}
-function toggleSidebar(){
-  const sb=document.getElementById('sidebar');
-  sb.style.display=sb.style.display==='none'?'':'none';
-  setTimeout(resize,50);
-}
-function screenshot(){
-  try{
-    const link=document.createElement('a');
-    link.download='imgui_xl_screenshot.png';
-    link.href=canvas.toDataURL();
-    link.click();
-    snack('📸 Screenshot saved!');
-  }catch(e){snack('Screenshot blocked (CORS)')}
-}
-function openPixelDemo(){window.open('pixel_os_demo.html','_blank')}
-function showAbout(){snack('imgui_xl — Enhanced ImGui fork by Turtle-PB · Echonation visuals · MIT License')}
-function closeMenu(){document.querySelectorAll('.mb-item').forEach(m=>m.classList.remove('open'))}
-
-// === SNACKBAR ===
-let snackTO;
-function snack(msg){
-  const el=document.getElementById('snackbar');
-  el.textContent=msg;el.classList.add('show');
-  clearTimeout(snackTO);
-  snackTO=setTimeout(()=>el.classList.remove('show'),2500);
-}
-
-// === SLIDERS ===
-function updateSliders(){
-  document.querySelectorAll('.slider').forEach(s=>{
-    const val=parseFloat(s.dataset.value||.5);
-    s.querySelector('.slider-fill').style.width=(val*100)+'%';
-    s.querySelector('.slider-knob').style.left=(val*100)+'%';
-  });
-}
-document.querySelectorAll('.slider').forEach(s=>{
-  let dragging=false;
-  const update=(e)=>{
-    const rect=s.getBoundingClientRect();
-    const val=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
-    s.dataset.value=val;
-    s.querySelector('.slider-fill').style.width=(val*100)+'%';
-    s.querySelector('.slider-knob').style.left=(val*100)+'%';
-    const label=s.parentElement.querySelector('.label')?.textContent||'';
-    if(label==='Intensity')state.intensity=val;
-    else if(label==='Speed')state.speed=val*2;
-    else if(label==='Hue Shift')state.hueShift=val;
-  };
-  s.addEventListener('mousedown',e=>{dragging=true;update(e)});
-  window.addEventListener('mousemove',e=>{if(dragging)update(e)});
-  window.addEventListener('mouseup',()=>dragging=false);
-});
-
-// === MOUSE TRACKING ===
-canvas.addEventListener('mousemove',e=>{
-  const rect=canvas.getBoundingClientRect();
-  state.mouseX=e.clientX-rect.left;state.mouseY=e.clientY-rect.top;
-  state.inputEvents++;
-  document.getElementById('sb-mouse').textContent=`Mouse: (${Math.round(state.mouseX)}, ${Math.round(state.mouseY)})`;
-});
-canvas.addEventListener('click',e=>{
-  const rect=canvas.getBoundingClientRect();
-  const x=e.clientX-rect.left,y=e.clientY-rect.top;
-  for(let i=0;i<20;i++)state.particles.push({x,y,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,life:1,size:Math.random()*3+1,hue:Math.random()*360});
-  state.inputEvents++;pulse();
-});
-
-// === KEYBOARD ===
-window.addEventListener('keydown',e=>{
-  if(e.target.tagName==='INPUT')return;
-  state.inputEvents++;
-  if(e.key===' '){toggleEchonation();e.preventDefault();}
-  if(e.key==='r'){randomize();}
-  if(e.key==='p'){pulse();}
-  if(e.key==='Tab'){cycleMode();e.preventDefault();}
-  if(e.key==='Enter'){enterDemo();}
-  if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();screenshot();}
-  if((e.ctrlKey||e.metaKey)&&e.key==='r'){e.preventDefault();location.reload();}
-  if((e.ctrlKey||e.metaKey)&&e.key==='p'){e.preventDefault();openPixelDemo();}
-  if((e.ctrlKey||e.metaKey)&&e.key==='h'){e.preventDefault();toggleSidebar();}
-});
-
-// === MENU BAR DROPDOWN ===
-document.querySelectorAll('.mb-item').forEach(item=>{
-  item.addEventListener('click',e=>{
-    e.stopPropagation();
-    const wasOpen=item.classList.contains('open');
-    closeMenu();
-    if(!wasOpen)item.classList.add('open');
-  });
-});
-document.addEventListener('click',()=>closeMenu());
-
-// === INIT ===
-updateSliders();
-state.startTime=performance.now();
-lastTime=state.startTime;
-requestAnimationFrame(loop);
+  draw();
+})();
 </script>
 </body>
 </html>

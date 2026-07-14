@@ -1,37 +1,56 @@
 # imgui_xl
 
-**Dear ImGui XL** — An enhanced community fork of [Dear ImGui](https://github.com/ocornut/imgui), focused on backend improvements, CI/CD fixes, and extended examples.
+**Dear ImGui XL** — An enhanced community fork of [Dear ImGui](https://github.com/ocornut/imgui), focused on backend improvements, CI/CD fixes, sensors, and extended examples.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Upstream](https://img.shields.io/badge/upstream-ocornut%2Fimgui-blue)](https://github.com/ocornut/imgui)
-[![Branch: master](https://img.shields.io/badge/branch-master-green)](https://github.com/Turtle-PB/imgui_xl/tree/master)
+[![Live Demo](https://img.shields.io/badge/demo-GitHub%20Pages-green)](https://turtle-pb.github.io/imgui_xl/)
+[![PRs](https://img.shields.io/badge/PRs-3%20open-orange)](https://github.com/ocornut/imgui/pulls?q=is%3Aopen+author%3ATurtle-PB)
 
 > Dear ImGui is a bloat-free graphical user interface library for C++. It outputs optimized vertex buffers that you can render anytime in your 3D-pipeline-enabled application. It is fast, portable, renderer-agnostic, and self-contained (no external dependencies).
 
-## Why This Fork?
+## Live Demos
 
-This fork (`imgui_xl`) serves as a staging ground for community contributions to Dear ImGui. It tracks upstream `master` and `docking` branches closely and adds:
+| Demo | Description | Link |
+|------|-------------|------|
+| **Showcase** | Landing page with all demos + PR list | [turtle-pb.github.io/imgui_xl](https://turtle-pb.github.io/imgui_xl/) |
+| **Echonation Visual** | 5-mode audio-reactive canvas demo | [echonation.html](https://turtle-pb.github.io/imgui_xl/echonation.html) |
+| **Pixel OS Model** | Interactive Pixel 8 Pro phone simulator | [pixel_os_demo.html](https://turtle-pb.github.io/imgui_xl/pixel_os_demo.html) |
 
-- **Backend fixes** — Vulkan use-after-free fix for multi-viewport dynamic rendering (#9390)
-- **CI/CD improvements** — Android build fixed via pinned Gradle wrapper (#8878)
-- **Enhanced metadata** — Topics, issues, and discussions enabled for community engagement
-- **Contributing guide** — Clear path for new contributors
+## Upstream Contributions
+
+This fork tracks upstream and contributes back via PRs:
+
+| PR | Issue | Description | Status |
+|----|-------|-------------|--------|
+| [#9467](https://github.com/ocornut/imgui/pull/9467) | [#8878](https://github.com/ocornut/imgui/issues/8878) | Android CI: Pin Gradle 9.4.1 via setup-gradle action (no binaries) | Open |
+| [#9468](https://github.com/ocornut/imgui/pull/9468) | [#9390](https://github.com/ocornut/imgui/issues/9390) | Vulkan: Fixed use-after-free in multi-viewport dynamic rendering | Open |
+| [#9469](https://github.com/ocornut/imgui/pull/9469) | [#3446](https://github.com/ocornut/imgui/issues/3446) | Android: Move JNI keyboard/clipboard into backend, add sensors + display | Open |
+
+### Backend Improvements (PR #9469)
+
+- **JNI keyboard/clipboard** — Moved ~120 lines of JNI boilerplate from the example into the backend. App code is now just `Init → Loop → Shutdown`.
+- **8 sensor types** — Accelerometer, gyroscope, magnetometer, light, proximity, pressure, humidity, ambient temperature via NDK ASensor API (no JNI).
+- **Display metrics** — DPI, density, xdpi/ydpi, refresh rate, orientation queried via JNI. Auto-scales ImGui style to actual device density.
+- **Clipboard** — Full clipboard support via JNI to Android ClipboardManager.
+- **Zero binaries** — No jar, no wrapper, no .gitignore changes.
+
+### CI Fix (PR #9467)
+
+- Uncommented and updated `setup-gradle@v6` action to pin Gradle 9.4.1 (required by AGP 9.2.0).
+- Single 4-line change to `build.yml`, no binaries added.
+
+### Vulkan Fix (PR #9468)
+
+- Deep-copy `SurfaceFormat.format` into persistent buffer in `ImGui_ImplVulkan_CreateWindow()` to prevent use-after-free when viewport is destroyed.
+- Follows the same deep-copy pattern already used in `CreateMainPipeline()`.
 
 ## Sync Status
 
-This fork is kept in sync with [ocornut/imgui](https://github.com/ocornut/imgui):
-
 | Branch | Tracks | Status |
 |--------|--------|--------|
-| `master` | `upstream/master` | ✅ Synced |
-| `docking` | `upstream/docking` | ✅ Synced |
-
-## Active Contribution Branches
-
-| Branch | Issue | Description |
-|--------|-------|-------------|
-| `fix/vulkan-dynamic-rendering-use-after-free` | [#9390](https://github.com/ocornut/imgui/issues/9390) | Fix use-after-free in Vulkan multi-viewport dynamic rendering |
-| `fix/android-ci-gradle-wrapper` | [#8878](https://github.com/ocornut/imgui/issues/8878) | Pin Gradle 9.4.1 via wrapper for AGP 9.2.0 compatibility |
+| `master` | `upstream/master` | Synced |
+| `docking` | `upstream/docking` | Synced |
 
 ## Quick Start
 
@@ -57,25 +76,6 @@ make
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on submitting issues, PRs, and syncing with upstream.
 
-## Web Demo: Pixel OS Model
-
-This fork includes an interactive **Pixel OS Model Demo** — a working Pixel 8 Pro phone simulator that showcases Pixel OS capabilities in any browser:
-
-- Lock screen, home screen, 7 functional apps (Phone, Messages, Camera, Settings, Clock, Photos, Browser)
-- Quick Settings, Recents, Dark Mode, Theme switcher
-- Full menu bar with keyboard shortcuts
-- 100% self-contained HTML — no build step, no dependencies
-
-**Run it:** Open [`examples/example_emscripten_pixel/pixel_os_demo.html`](examples/example_emscripten_pixel/pixel_os_demo.html) in any browser, or visit the [live demo on GitHub Pages](https://turtle-pb.github.io/imgui_xl/examples/example_emscripten_pixel/pixel_os_demo.html).
-
-## Upstream Resources
-
-- **Dear ImGui Homepage**: [github.com/ocornut/imgui](https://github.com/ocornut/imgui)
-- **Documentation**: [docs/](docs/) directory
-- **FAQ**: [docs/FAQ.md](docs/FAQ.md)
-- **Wiki**: [github.com/ocornut/imgui/wiki](https://github.com/ocornut/imgui/wiki)
-- **Issues**: [github.com/ocornut/imgui/issues](https://github.com/ocornut/imgui/issues)
-
 ## License
 
 MIT License — see [LICENSE.txt](LICENSE.txt) for details.
@@ -83,3 +83,5 @@ MIT License — see [LICENSE.txt](LICENSE.txt) for details.
 ## Credits
 
 Dear ImGui is developed by [Omar Cornut](https://github.com/ocornut) and every direct or indirect [contributor](https://github.com/ocornut/imgui/graphs/contributors) to the GitHub repository.
+
+Echonation visuals inspired by [@Echonation](https://youtube.com/@echonationmusic). Fork by [Paul Adcock](https://github.com/Turtle-PB) (Turtle-PB).

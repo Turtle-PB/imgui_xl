@@ -220,12 +220,33 @@
       /* ===== BROWSER APP ===== */
       .browser-app { background:#fff; }
       .browser-app .app-header { background:#fff; color:#1a1a1a; border-bottom:1px solid #f0f0f0; }
-      .browser-bar { display:flex; gap:8px; padding:8px 16px; border-bottom:1px solid #f0f0f0; }
-      .browser-url { flex:1; background:#f0f2f5; border-radius:24px; padding:8px 16px; font-size:13px; color:#5f6368; display:flex; align-items:center; gap:8px; }
-      .browser-content { padding:16px; overflow-y:auto; flex:1; }
-      .browser-card { background:#fff; border:1px solid #e8e8ed; border-radius:12px; padding:16px; margin-bottom:12px; }
+      .browser-bar { display:flex; gap:6px; padding:8px 12px; border-bottom:1px solid #f0f0f0; align-items:center; }
+      .browser-btn { width:32px; height:32px; border:none; background:transparent; border-radius:50%; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; color:#5f6368; flex-shrink:0; }
+      .browser-btn:hover { background:#f0f2f5; }
+      .browser-btn:disabled { opacity:0.3; cursor:default; }
+      .browser-url { flex:1; background:#f0f2f5; border-radius:24px; padding:8px 16px; font-size:13px; color:#5f6368; display:flex; align-items:center; gap:8px; min-width:0; }
+      .browser-url input { border:none; background:transparent; outline:none; font-size:13px; flex:1; font-family:inherit; color:#1a1a1a; min-width:0; }
+      .browser-url-icon { flex-shrink:0; font-size:12px; }
+      .browser-tabs { font-size:12px; color:#5f6368; padding:4px 12px; border-top:1px solid #f0f0f0; display:flex; gap:12px; overflow-x:auto; }
+      .browser-tab { white-space:nowrap; padding:4px 10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px; }
+      .browser-tab.active { background:#e8f0fe; color:#1a73e8; }
+      .browser-tab-close { font-size:10px; opacity:0.5; }
+      .browser-content { flex:1; overflow:hidden; position:relative; }
+      .browser-iframe { width:100%; height:100%; border:none; background:#fff; }
+      .browser-home { padding:24px 16px; overflow-y:auto; height:100%; }
+      .browser-card { background:#fff; border:1px solid #e8e8ed; border-radius:12px; padding:16px; margin-bottom:12px; cursor:pointer; transition:border-color .15s; }
+      .browser-card:hover { border-color:#4285f4; }
       .browser-card h3 { font-size:16px; color:#1a1a1a; margin-bottom:6px; }
       .browser-card p { font-size:13px; color:#5f6368; line-height:1.5; }
+      .browser-error { text-align:center; padding:40px 20px; color:#5f6368; }
+      .browser-error h3 { font-size:18px; color:#1a1a1a; margin-bottom:8px; }
+      .browser-loading { position:absolute; top:0; left:0; right:0; height:3px; background:#4285f4; animation:browserLoad 1.5s ease-in-out infinite; z-index:10; }
+      @keyframes browserLoad { 0%{width:0%} 50%{width:70%} 100%{width:100%} }
+      .home-screen.dark .browser-url { background:#2a2a2a; }
+      .home-screen.dark .browser-url input { color:#e8e8e8; }
+      .home-screen.dark .browser-btn { color:#aaa; }
+      .home-screen.dark .browser-btn:hover { background:#333; }
+      .home-screen.dark .browser-tab.active { background:#1e3a5f; color:#8ab4f8; }
 
       /* ===== QUICK SETTINGS ===== */
       .quick-settings { position:absolute; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(8px); z-index:60; display:none; opacity:0; transition:opacity 0.3s; }
@@ -568,18 +589,48 @@
           </div>
 
           <!-- ===== BROWSER APP ===== -->
-          <div class="app-window" id="browserApp" style="background:#fff">
-            <div class="app-header" style="background:#fff;border-bottom:1px solid #f0f0f0">
-              <div class="app-close" onclick="closeApp('browserApp')">←</div><span>Chrome</span>
-            </div>
-            <div class="browser-bar"><div class="browser-url"><span>🔒</span> google.com</div></div>
-            <div class="browser-content">
-              <div class="browser-card"><h3>🔍 Google Search</h3><p>The world's information at your fingertips.</p><div style="margin-top:12px;display:flex;gap:8px"><div style="background:#4285f4;color:#fff;padding:8px 20px;border-radius:24px;font-size:12px;cursor:pointer" onclick="menuSnack('Searching...')">Search</div><div style="background:#fff;border:1px solid #dadce0;padding:8px 16px;border-radius:24px;font-size:12px;cursor:pointer" onclick="menuSnack('Lucky!')">I'm Feeling Lucky</div></div></div>
-              <div class="browser-card"><h3>📰 Top Stories</h3><p>Android 15 brings new AI features, privacy controls, and Material You enhancements.</p></div>
-              <div class="browser-card"><h3>🌟 Discover</h3><p>Pixel 8 Pro voted best smartphone of 2024 by The Verge.</p></div>
-              <div class="browser-card"><h3>🎵 Trending</h3><p>New music releases this week - check out the charts.</p></div>
-            </div>
-          </div>
+                    <div class="app-window" id="browserApp" style="background:#fff">
+                      <div class="app-header" style="background:#fff;border-bottom:1px solid #f0f0f0">
+                        <div class="app-close" onclick="closeApp('browserApp')">←</div><span>Chrome</span>
+                      </div>
+                      <div class="browser-bar">
+                        <button class="browser-btn" id="browserBack" onclick="browserBack()" title="Back">‹</button>
+                        <button class="browser-btn" id="browserFwd" onclick="browserForward()" title="Forward">›</button>
+                        <button class="browser-btn" onclick="browserReload()" title="Reload">⟳</button>
+                        <div class="browser-url">
+                          <span class="browser-url-icon" id="browserUrlIcon">🔍</span>
+                          <input type="text" id="browserUrlInput" placeholder="Search or type URL"
+                            onkeydown="if(event.key==='Enter')browserNavigate(this.value)"
+                            onfocus="this.select()" -webkit-user-select:text; user-select:text;>
+                        </div>
+                        <button class="browser-btn" onclick="browserHome()" title="Home">⌂</button>
+                      </div>
+                      <div class="browser-tabs" id="browserTabs"></div>
+                      <div class="browser-content" id="browserContent">
+                        <div class="browser-home" id="browserHome">
+                          <div class="browser-card" onclick="browserNavigate('https://www.google.com')">
+                            <h3>🔍 Google</h3>
+                            <p>Search the world's information, including webpages, images, videos and more.</p>
+                          </div>
+                          <div class="browser-card" onclick="browserNavigate('https://github.com/ocornut/imgui')">
+                            <h3>📦 Dear ImGui on GitHub</h3>
+                            <p>Bloat-free graphical user interface library for C++. Minimal dependencies.</p>
+                          </div>
+                          <div class="browser-card" onclick="browserNavigate('https://github.com/Turtle-PB/imgui_xl')">
+                            <h3>🦅 imgui_xl Fork</h3>
+                            <p>Enhanced community fork with backend improvements, Go bindings, and live demos.</p>
+                          </div>
+                          <div class="browser-card" onclick="browserNavigate('https://developer.android.com')">
+                            <h3>🤖 Android Developers</h3>
+                            <p>Documentation, guides, and API references for Android app development.</p>
+                          </div>
+                          <div class="browser-card" onclick="browserNavigate('https://www.wikipedia.org')">
+                            <h3>📚 Wikipedia</h3>
+                            <p>The Free Encyclopedia. Over 6 million articles in English.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
           <!-- ===== QUICK SETTINGS ===== -->
           <div class="quick-settings" id="quickSettings" onclick="if(event.target===this)closeQuickSettings()">
@@ -718,6 +769,156 @@
     closeRecents();
   }
   function goHome(){ closeAllApps(); if(!document.getElementById('homeScreen').classList.contains('active')) unlock(); }
+
+  // ===== BROWSER =====
+  var browserHistory = [];
+  var browserHistoryIndex = -1;
+  var browserCurrentUrl = '';
+
+  function browserNavigate(input) {
+    if (!input || !input.trim()) return;
+    input = input.trim();
+
+    // Determine if it's a URL or a search query
+    var url;
+    if (input.match(/^https?:\/\//i)) {
+      url = input;
+    } else if (input.match(/^[\w-]+(\.[\w-]+)+(\/.*)?$/)) {
+      // Looks like a domain (e.g. google.com, github.com/ocornut/imgui)
+      url = 'https://' + input;
+    } else {
+      // Search query — use Google
+      url = 'https://www.google.com/search?igu=1&q=' + encodeURIComponent(input);
+    }
+
+    // Push to history
+    if (browserHistoryIndex < browserHistory.length - 1) {
+      browserHistory = browserHistory.slice(0, browserHistoryIndex + 1);
+    }
+    browserHistory.push(url);
+    browserHistoryIndex = browserHistory.length - 1;
+    browserLoadUrl(url);
+  }
+
+  function browserLoadUrl(url) {
+    browserCurrentUrl = url;
+    var content = document.getElementById('browserContent');
+    var urlInput = document.getElementById('browserUrlInput');
+    var urlIcon = document.getElementById('browserUrlIcon');
+
+    // Update URL bar
+    var displayUrl = url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+    urlInput.value = displayUrl;
+    urlIcon.textContent = url.startsWith('https://') ? '🔒' : '⚠️';
+
+    // Show loading bar
+    content.innerHTML = '<div class="browser-loading"></div>';
+
+    // Create iframe
+    var iframe = document.createElement('iframe');
+    iframe.className = 'browser-iframe';
+    iframe.sandbox = 'allow-scripts allow-same-origin allow-forms allow-popups';
+    iframe.onload = function() {
+      // Loading complete
+      var loading = content.querySelector('.browser-loading');
+      if (loading) loading.remove();
+      try {
+        var title = iframe.contentDocument && iframe.contentDocument.title;
+        browserUpdateTab(title || displayUrl);
+      } catch(e) {
+        browserUpdateTab(displayUrl);
+      }
+    };
+    iframe.onerror = function() {
+      browserShowError(url);
+    };
+
+    // Set src after attaching handlers
+    iframe.src = url;
+    content.appendChild(iframe);
+
+    // Update nav buttons
+    browserUpdateNavButtons();
+
+    // Fallback: if iframe doesn't load in 8 seconds, show error
+    setTimeout(function() {
+      if (content.querySelector('.browser-loading')) {
+        var loading = content.querySelector('.browser-loading');
+        // Keep the loading bar but also show content below
+      }
+    }, 8000);
+
+    // Update tabs
+    browserRenderTabs();
+  }
+
+  function browserShowError(url) {
+    var content = document.getElementById('browserContent');
+    content.innerHTML = '<div class="browser-error"><h3>🌐 Page Unavailable</h3><p>This site may block embedding in iframes (X-Frame-Options).</p><p style="margin-top:12px;font-size:12px">URL: ' + url + '</p><div style="margin-top:16px"><a href="' + url + '" target="_blank" style="color:#1a73e8;font-size:13px">Open in new tab ↗</a></div><div style="margin-top:20px"><button class="browser-btn" style="background:#4285f4;color:#fff;width:auto;padding:8px 20px;border-radius:24px;font-size:13px" onclick="browserHome()">⌂ Go Home</button></div></div>';
+  }
+
+  function browserBack() {
+    if (browserHistoryIndex > 0) {
+      browserHistoryIndex--;
+      browserLoadUrl(browserHistory[browserHistoryIndex]);
+    }
+  }
+
+  function browserForward() {
+    if (browserHistoryIndex < browserHistory.length - 1) {
+      browserHistoryIndex++;
+      browserLoadUrl(browserHistory[browserHistoryIndex]);
+    }
+  }
+
+  function browserReload() {
+    if (browserCurrentUrl) {
+      browserLoadUrl(browserCurrentUrl);
+    }
+  }
+
+  function browserHome() {
+    browserCurrentUrl = '';
+    var content = document.getElementById('browserContent');
+    var urlInput = document.getElementById('browserUrlInput');
+    var urlIcon = document.getElementById('browserUrlIcon');
+    urlInput.value = '';
+    urlIcon.textContent = '🔍';
+    content.innerHTML = '<div class="browser-home" id="browserHome">' +
+      '<div class="browser-card" onclick="browserNavigate(\'https://www.google.com\')"><h3>🔍 Google</h3><p>Search the world\'s information.</p></div>' +
+      '<div class="browser-card" onclick="browserNavigate(\'https://github.com/ocornut/imgui\')"><h3>📦 Dear ImGui</h3><p>Bloat-free GUI library for C++.</p></div>' +
+      '<div class="browser-card" onclick="browserNavigate(\'https://github.com/Turtle-PB/imgui_xl\')"><h3>🦅 imgui_xl</h3><p>Enhanced community fork with live demos.</p></div>' +
+      '<div class="browser-card" onclick="browserNavigate(\'https://developer.android.com\')"><h3>🤖 Android Developers</h3><p>Docs, guides, and API references.</p></div>' +
+      '<div class="browser-card" onclick="browserNavigate(\'https://www.wikipedia.org\')"><h3>📚 Wikipedia</h3><p>The Free Encyclopedia.</p></div>' +
+      '</div>';
+    browserHistory = [];
+    browserHistoryIndex = -1;
+    browserUpdateNavButtons();
+    browserRenderTabs();
+  }
+
+  function browserUpdateNavButtons() {
+    var backBtn = document.getElementById('browserBack');
+    var fwdBtn = document.getElementById('browserFwd');
+    if (backBtn) backBtn.disabled = browserHistoryIndex <= 0;
+    if (fwdBtn) fwdBtn.disabled = browserHistoryIndex >= browserHistory.length - 1;
+  }
+
+  function browserUpdateTab(title) {
+    browserRenderTabs(title);
+  }
+
+  function browserRenderTabs(title) {
+    var tabsEl = document.getElementById('browserTabs');
+    if (!browserCurrentUrl) {
+      tabsEl.innerHTML = '';
+      return;
+    }
+    var displayUrl = browserCurrentUrl.replace(/^https?:\/\//, '').replace(/^www\./, '');
+    var tabTitle = title || displayUrl;
+    if (tabTitle.length > 20) tabTitle = tabTitle.substring(0, 20) + '…';
+    tabsEl.innerHTML = '<div class="browser-tab active"><span>🌐</span> ' + tabTitle + '</div>';
+  }
 
   // ===== SETTINGS =====
   function toggleSetting(el){

@@ -46,12 +46,18 @@ jobs:
         source ./emsdk_env.sh
         popd
 
-        # Build with custom shell, single-file output (everything embedded in one .html)
-        make -C examples/example_sdl2_opengl3 -f Makefile.emscripten \
-          LDFLAGS+="-sSINGLE_FILE --shell-file ../libs/emscripten/shell_imgui_xl.html"
+        # Build with custom shell file (single-file mode: all WASM embedded in one .html)
+        # We sed the Makefile to use our custom shell and enable SINGLE_FILE
+        cd examples/example_sdl2_opengl3
+        sed -i 's|--shell-file ../libs/emscripten/shell_minimal.html|--shell-file ../libs/emscripten/shell_imgui_xl.html|' Makefile.emscripten
+        sed -i 's|#LDFLAGS += -sSINGLE_FILE|LDFLAGS += -sSINGLE_FILE|' Makefile.emscripten
+        make -f Makefile.emscripten -j$(nproc)
 
         # Verify output
-        ls -la examples/example_sdl2_opengl3/web/
+        echo "=== Build output ==="
+        ls -la web/
+        echo "=== File size ==="
+        du -sh web/index.html
 
     - name: Deploy to gh-pages
       uses: peaceiris/actions-gh-pages@v4

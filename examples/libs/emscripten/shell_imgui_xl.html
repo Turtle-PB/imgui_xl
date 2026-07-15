@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"/>
+    <title>Dear ImGui — Live Web Demo (imgui_xl)</title>
+    <style>
+      body { margin: 0; background-color: #0d0e12; overflow: hidden; font-family: -apple-system, sans-serif; }
+      .emscripten {
+        position: absolute; top: 0; left: 0; margin: 0; border: 0;
+        width: 100%; height: 100%; overflow: hidden; display: block;
+      }
+      #canvas:focus { outline: none; }
+      #loading {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        text-align: center; color: #6b7080; font-size: 14px; z-index: 10;
+      }
+      #loading .spinner {
+        width: 40px; height: 40px; border: 3px solid #1c1f2b;
+        border-top-color: #4a9eff; border-radius: 50%;
+        animation: spin 1s linear infinite; margin: 0 auto 16px;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      #loading h1 { color: #e8eaf0; font-size: 18px; margin: 0 0 8px; }
+      #loading p { margin: 0; }
+      #loading .hint { font-size: 12px; margin-top: 12px; color: #4a6fa5; }
+    </style>
+  </head>
+  <body>
+    <div id="loading">
+      <div class="spinner"></div>
+      <h1>Dear ImGui — Live Web Demo</h1>
+      <p>Loading WASM build...</p>
+      <p class="hint">Click the canvas to interact. Right-click works too.</p>
+    </div>
+    <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+    <script type='text/javascript'>
+      var Module = {
+        preRun: [],
+        postRun: [],
+        print: function(text) { console.log(text); },
+        printErr: function(text) { console.error(text); },
+        canvas: (function() {
+          var canvas = document.getElementById('canvas');
+          canvas.addEventListener("webglcontextlost", function(e) {
+            alert('WebGL context lost. Please reload the page.');
+            e.preventDefault();
+          }, false);
+          return canvas;
+        })(),
+        onRuntimeInitialized: function() {
+          var loading = document.getElementById('loading');
+          if (loading) loading.style.display = 'none';
+        },
+        setStatus: function(text) { console.log("status: " + text); },
+        monitorRunDependencies: function(left) {}
+      };
+      window.onerror = function() { console.log("onerror: " + event); };
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>

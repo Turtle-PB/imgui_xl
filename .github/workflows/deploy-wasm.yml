@@ -1,0 +1,63 @@
+name: Deploy ImGui WASM to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'imgui.cpp'
+      - 'imgui.h'
+      - 'imgui_demo.cpp'
+      - 'imgui_draw.cpp'
+      - 'imgui_tables.cpp'
+      - 'imgui_widgets.cpp'
+      - 'backends/imgui_impl_sdl2.*'
+      - 'backends/imgui_impl_opengl3.*'
+      - 'examples/example_sdl2_opengl3/main.cpp'
+      - 'examples/example_sdl2_opengl3/Makefile.emscripten'
+      - 'examples/libs/emscripten/**'
+      - '.github/workflows/deploy-wasm.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    name: Build ImGui WASM and deploy to gh-pages
+
+    steps:
+    - name: Checkout imgui_xl
+      uses: actions/checkout@v6
+
+    - name: Install Emscripten
+      run: |
+        wget -q https://github.com/emscripten-core/emsdk/archive/master.tar.gz
+        tar -xzf master.tar.gz
+        emsdk-master/emsdk update
+        emsdk-master/emsdk install latest
+        emsdk-master/emsdk activate latest
+        sudo apt-get install build-essential
+
+    - name: Build SDL2+OpenGL3 ImGui WASM
+      run: |
+        pushd emsdk-master
+        source ./emsdk_env.sh
+        popd
+
+        # Build with custom shell, single-file output (everything embedded in one .html)
+        make -C examples/example_sdl2_opengl3 -f Makefile.emscripten \
+          LDFLAGS+="-sSINGLE_FILE --shell-file ../libs/emscripten/shell_imgui_xl.html"
+
+        # Verify output
+        ls -la examples/example_sdl2_opengl3/web/
+
+    - name: Deploy to gh-pages
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_branch: gh-pages
+        publish_dir: examples/example_sdl2_opengl3/web
+        destination_dir: wasm
+        keep_files: true

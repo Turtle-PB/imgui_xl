@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ImGui Widget Playground — imgui_xl</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d0e12;--panel:#161821;--panel2:#1c1f2b;--input:#0a0b0f;
+  --border:#2a2d3a;--border-active:#4a6fa5;
+  --text:#c8cdd9;--dim:#6b7080;--bright:#e8eaf0;
+  --accent:#4a9eff;--green:#5cb85c;--orange:#f0ad4e;--red:#d9534f;--purple:#ab47bc;
+  --mono:'Cascadia Code','Fira Code',monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden;height:100vh}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--panel)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+#app{display:grid;grid-template-columns:260px 1fr 280px;grid-template-rows:36px 1fr 22px;height:100vh}
+.menubar{grid-column:1/-1;display:flex;align-items:center;gap:0;background:var(--panel);border-bottom:1px solid var(--border);padding:0 8px}
+.mb-item{padding:0 12px;height:36px;display:flex;align-items:center;cursor:pointer;color:var(--dim);font-size:13px}
+.mb-item:hover{color:var(--bright);background:var(--panel2)}
+.mb-sep{width:1px;height:18px;background:var(--border)}
+.mb-spacer{flex:1}
+.mb-right{font-family:var(--mono);font-size:11px;color:var(--dim);padding:0 12px}
+
+.left-panel{background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;padding:8px}
+.viewport{position:relative;overflow:hidden;background:var(--bg)}
+.right-panel{background:var(--panel);border-left:1px solid var(--border);overflow-y:auto;padding:8px}
+.statusbar{grid-column:1/-1;display:flex;align-items:center;background:var(--panel);border-top:1px solid var(--border);padding:0 12px;font-family:var(--mono);font-size:11px;color:var(--dim);gap:12px}
+
+.win{background:var(--panel2);border:1px solid var(--border);border-radius:4px;margin-bottom:8px;overflow:hidden}
+.win-header{padding:6px 10px;font-size:12px;font-weight:600;color:var(--bright);border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);cursor:default;display:flex;align-items:center;gap:6px}
+.win-body{padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.row{display:flex;align-items:center;gap:8px;min-height:22px}
+.label{font-size:12px;color:var(--dim);min-width:70px;flex-shrink:0}
+.value{font-family:var(--mono);font-size:12px;color:var(--bright)}
+
+.btn{padding:5px 14px;background:var(--panel);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;cursor:pointer;transition:all .15s}
+.btn:hover{border-color:var(--border-active);color:var(--bright)}
+.btn:active{background:var(--accent);color:#fff}
+.btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;user-select:none}
+.chk-box{width:16px;height:16px;border:1px solid var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center}
+.chk.on .chk-box{background:var(--accent);border-color:var(--accent)}
+.chk.on .chk-box::after{content:'';width:8px;height:4px;border:1.5px solid #fff;border-top:none;border-right:none;transform:rotate(-45deg) translateY(-1px)}
+
+.slider{flex:1;height:24px;display:flex;align-items:center;cursor:pointer}
+.slider-track{width:100%;height:4px;background:var(--input);border-radius:2px;position:relative}
+.slider-fill{height:100%;background:var(--accent);border-radius:2px}
+.slider-knob{position:absolute;top:50%;width:10px;height:20px;background:var(--panel);border:1px solid var(--accent);border-radius:2px;transform:translate(-50%,-50%);box-shadow:0 0 4px rgba(74,158,255,.15)}
+
+.rdio{display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;user-select:none}
+.rdio-dot{width:14px;height:14px;border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.rdio.on .rdio-dot{border-color:var(--accent)}
+.rdio.on .rdio-dot::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+.color-prev{width:28px;height:18px;border-radius:2px;border:1px solid var(--border);display:inline-block}
+.tab{padding:4px 12px;font-size:12px;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+
+.canvas-area{position:absolute;inset:0}
+canvas{display:block}
+.overlay-text{position:absolute;font-family:var(--mono);font-size:11px;color:var(--dim);pointer-events:none;text-shadow:0 0 4px var(--bg)}
+
+.tree-node{cursor:pointer;font-size:12px;padding:3px 0;color:var(--dim)}
+.tree-node:hover{color:var(--text)}
+.tree-node.sel{color:var(--accent)}
+.tree-children{padding-left:14px}
+
+.progress{width:100%;height:8px;background:var(--input);border-radius:4px;overflow:hidden}
+.progress-bar{height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="menubar">
+    <div class="mb-item">File</div>
+    <div class="mb-item">Edit</div>
+    <div class="mb-item">View</div>
+    <div class="mb-item">Widgets</div>
+    <div class="mb-item">Tools</div>
+    <div class="mb-sep"></div>
+    <div class="mb-item">Help</div>
+    <div class="mb-spacer"></div>
+    <div class="mb-right" id="fps-display">60.0 FPS</div>
+    <div class="mb-sep"></div>
+    <div class="mb-right" id="frame-display">0 frames</div>
+  </div>
+
+  <div class="left-panel">
+    <div class="win">
+      <div class="win-header">Hierarchy</div>
+      <div class="win-body">
+        <div class="tree-node sel">Viewport</div>
+        <div class="tree-children">
+          <div class="tree-node">Main Window</div>
+          <div class="tree-children">
+            <div class="tree-node">Slider</div>
+            <div class="tree-node">Button Group</div>
+            <div class="tree-node">Color Picker</div>
+          </div>
+          <div class="tree-node">Metrics Panel</div>
+          <div class="tree-node">Canvas Renderer</div>
+        </div>
+      </div>
+    </div>
+    <div class="win">
+      <div class="win-header">Scene Settings</div>
+      <div class="win-body">
+        <div class="chk on" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Show Grid</div>
+        <div class="chk on" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Show FPS</div>
+        <div class="chk" onclick="this.classList.toggle('on')"><span class="chk-box"></span> VSync</div>
+        <div class="chk on" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Anti-Aliasing</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="viewport">
+    <div class="canvas-area"><canvas id="canvas"></canvas></div>
+    <div class="overlay-text" style="top:8px;left:8px">## Viewport — Widget Playground</div>
+    <div class="overlay-text" style="bottom:8px;left:8px" id="canvas-stats">Render: 0 draw calls</div>
+  </div>
+
+  <div class="right-panel">
+    <div class="win">
+      <div class="win-header">Properties</div>
+      <div class="win-body">
+        <div class="row"><span class="label">Name</span><span class="value">ButtonWidget</span></div>
+        <div class="row"><span class="label">Type</span><span class="value">ImGui::Button</span></div>
+        <div class="row"><span class="label">Size X</span>
+          <div class="slider" id="sz-x" data-val="0.3"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+        </div>
+        <div class="row"><span class="label">Size Y</span>
+          <div class="slider" id="sz-y" data-val="0.15"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+        </div>
+        <div class="row"><span class="label">Color</span>
+          <span class="color-prev" id="color-prev" style="background:#4a9eff"></span>
+          <span class="value" id="color-val">#4a9eff</span>
+        </div>
+      </div>
+    </div>
+    <div class="win">
+      <div class="win-header">Widget Demo</div>
+      <div class="win-body">
+        <div class="row"><span class="label">Tabs:</span></div>
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:4px">
+          <div class="tab on" onclick="setTab(this,0)">Main</div>
+          <div class="tab" onclick="setTab(this,1)">Advanced</div>
+          <div class="tab" onclick="setTab(this,2)">Metrics</div>
+        </div>
+        <div id="tab-0">
+          <div class="row"><span class="label">Float</span>
+            <div class="slider" id="f1" data-val="0.5"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+          </div>
+          <div class="row"><span class="label">Int</span>
+            <div class="slider" id="i1" data-val="0.3"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+          </div>
+          <div class="row" style="gap:4px">
+            <button class="btn" onclick="addProgress()">Add Progress</button>
+            <button class="btn" onclick="resetProgress()">Reset</button>
+          </div>
+          <div class="row"><span class="label">Progress</span></div>
+          <div class="progress"><div class="progress-bar" id="prog-bar" style="width:50%"></div></div>
+        </div>
+        <div id="tab-1" style="display:none">
+          <div class="chk on" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Enabled</div>
+          <div class="chk on" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Visible</div>
+          <div class="chk" onclick="this.classList.toggle('on')"><span class="chk-box"></span> No Background</div>
+          <div class="chk" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Mouse Input</div>
+          <div class="row"><span class="label">Radio:</span></div>
+          <div style="display:flex;gap:12px">
+            <div class="rdio on" onclick="setRadio(this)"><span class="rdio-dot"></span> A</div>
+            <div class="rdio" onclick="setRadio(this)"><span class="rdio-dot"></span> B</div>
+            <div class="rdio" onclick="setRadio(this)"><span class="rdio-dot"></span> C</div>
+          </div>
+        </div>
+        <div id="tab-2" style="display:none">
+          <div class="row"><span class="label">FPS</span><span class="value" id="m-fps">60.0</span></div>
+          <div class="row"><span class="label">Frame</span><span class="value" id="m-frame">16.67ms</span></div>
+          <div class="row"><span class="label">Draws</span><span class="value" id="m-draws">0</span></div>
+          <div class="row"><span class="label">Vertices</span><span class="value" id="m-verts">0</span></div>
+          <div class="row"><span class="label">Memory</span><span class="value" id="m-mem">0 KB</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="win">
+      <div class="win-header">Console</div>
+      <div class="win-body" style="font-family:var(--mono);font-size:11px">
+        <div style="color:var(--green)">[INFO] ImGui context created</div>
+        <div style="color:var(--green)">[INFO] Dark style applied</div>
+        <div style="color:var(--dim)">[INFO] Rendering 60 FPS</div>
+        <div style="color:var(--orange)">[WARN] No backend attached</div>
+        <div style="color:var(--dim)">[INFO] Running in canvas mode</div>
+        <div id="console-log" style="color:var(--accent)"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <span>imgui_xl Widget Playground</span>
+    <span>|</span>
+    <span id="sb-fps">60.0 FPS</span>
+    <span>|</span>
+    <span id="sb-draws">0 draws</span>
+    <span style="flex:1"></span>
+    <span style="color:var(--green)">Ready</span>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = window.devicePixelRatio || 1;
+function resize() {
+  const vp = canvas.parentElement;
+  W = vp.clientWidth; H = vp.clientHeight;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+let frame = 0, startTime = performance.now(), lastTime = 0;
+let fps = 60, frameTime = 16.67;
+let progress = 0.5, progressDir = 1;
+let drawCalls = 0, vertices = 0;
+
+function loop(ts) {
+  const dt = (ts - lastTime) / 1000;
+  lastTime = ts;
+  const t = (ts - startTime) / 1000;
+  if (dt > 0) { fps = 0.9 * fps + 0.1 * (1/dt); frameTime = dt * 1000; }
+
+  // Draw grid background
+  ctx.fillStyle = '#0d0e12';
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#161821';
+  ctx.lineWidth = 1;
+  const gridSize = 40;
+  for (let x = 0; x < W; x += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += gridSize) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Draw animated widget previews
+  drawCalls = 0; vertices = 0;
+
+  // Button preview
+  const btnW = 120 + Math.sin(t) * 20;
+  const btnH = 36;
+  const btnX = W/2 - btnW/2;
+  const btnY = H/2 - 80;
+  const btnHover = mouseX > btnX && mouseX < btnX+btnW && mouseY > btnY && mouseY < btnY+btnH;
+  ctx.fillStyle = btnHover ? '#4a9eff' : '#1c1f2b';
+  ctx.strokeStyle = btnHover ? '#4a9eff' : '#2a2d3a';
+  ctx.lineWidth = 1;
+  ctx.fillRect(btnX, btnY, btnW, btnH);
+  ctx.strokeRect(btnX, btnY, btnW, btnH);
+  ctx.fillStyle = btnHover ? '#fff' : '#c8cdd9';
+  ctx.font = '13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Click Me!', btnX + btnW/2, btnY + btnH/2 + 4);
+  drawCalls++; vertices += 6;
+
+  // Slider preview
+  const sliderY = btnY + 60;
+  ctx.strokeStyle = '#2a2d3a';
+  ctx.fillStyle = '#0a0b0f';
+  ctx.fillRect(W/2 - 100, sliderY, 200, 4);
+  const sliderPos = 100 + Math.sin(t * 0.5) * 80;
+  ctx.fillStyle = '#4a9eff';
+  ctx.fillRect(W/2 - 100, sliderY, sliderPos, 4);
+  ctx.fillRect(W/2 - 100 + sliderPos - 5, sliderY - 8, 10, 20);
+  drawCalls += 2; vertices += 12;
+
+  // Color preview circle
+  const colorY = sliderY + 40;
+  const hue = (t * 60) % 360;
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + t;
+    const r = 30 + Math.sin(t * 2 + i) * 5;
+    const cx = W/2 + Math.cos(a) * r;
+    const cy = colorY + Math.sin(a) * r;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.fillStyle = `hsl(${(hue + i * 45) % 360}, 70%, 60%)`;
+    ctx.fill();
+  }
+  drawCalls += 8; vertices += 32;
+
+  // Progress bar
+  progress += progressDir * 0.005;
+  if (progress > 1) { progress = 1; progressDir = -1; }
+  if (progress < 0) { progress = 0; progressDir = 1; }
+  document.getElementById('prog-bar').style.width = (progress * 100) + '%';
+
+  // Text overlay
+  ctx.textAlign = 'left';
+  ctx.font = '11px monospace';
+  ctx.fillStyle = '#6b7080';
+  ctx.fillText('ImGui::Button("Click Me!", ImVec2(' + btnW.toFixed(0) + ', ' + btnH + '))', 16, H - 40);
+  ctx.fillText('ImGui::SliderFloat("Float", &v, 0.0f, 1.0f)', 16, H - 25);
+  ctx.fillText('ImGui::ColorEdit3("Color", &col[0])', 16, H - 10);
+
+  frame++;
+
+  // Update stats
+  const fpsStr = fps.toFixed(1);
+  document.getElementById('fps-display').textContent = fpsStr + ' FPS';
+  document.getElementById('frame-display').textContent = frame + ' frames';
+  document.getElementById('m-fps').textContent = fpsStr;
+  document.getElementById('m-frame').textContent = frameTime.toFixed(2) + 'ms';
+  document.getElementById('m-draws').textContent = drawCalls;
+  document.getElementById('m-verts').textContent = vertices;
+  document.getElementById('m-mem').textContent = Math.round(frame * 0.05) + ' KB';
+  document.getElementById('canvas-stats').textContent = 'Render: ' + drawCalls + ' draw calls';
+  document.getElementById('sb-fps').textContent = fpsStr + ' FPS';
+  document.getElementById('sb-draws').textContent = drawCalls + ' draws';
+
+  requestAnimationFrame(loop);
+}
+
+let mouseX = 0, mouseY = 0;
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+  mouseY = e.clientY - rect.top;
+});
+
+canvas.addEventListener('click', () => {
+  const el = document.getElementById('console-log');
+  el.textContent = '[INFO] Button clicked at frame ' + frame;
+  const color = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
+  document.getElementById('color-prev').style.background = color;
+  document.getElementById('color-val').textContent = color;
+});
+
+// Sliders
+document.querySelectorAll('.slider').forEach(s => {
+  let dragging = false;
+  const update = e => {
+    const r = s.getBoundingClientRect();
+    const v = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    s.dataset.val = v;
+    s.querySelector('.slider-fill').style.width = (v*100)+'%';
+    s.querySelector('.slider-knob').style.left = (v*100)+'%';
+  };
+  s.addEventListener('mousedown', e => { dragging = true; update(e); });
+  window.addEventListener('mousemove', e => { if(dragging) update(e); });
+  window.addEventListener('mouseup', () => dragging = false);
+});
+
+// Init sliders
+document.querySelectorAll('.slider').forEach(s => {
+  const v = parseFloat(s.dataset.val || 0.5);
+  s.querySelector('.slider-fill').style.width = (v*100)+'%';
+  s.querySelector('.slider-knob').style.left = (v*100)+'%';
+});
+
+function setTab(el, idx) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+  [0,1,2].forEach(i => {
+    document.getElementById('tab-' + i).style.display = i === idx ? '' : 'none';
+  });
+}
+
+function setRadio(el) {
+  el.parentElement.querySelectorAll('.rdio').forEach(r => r.classList.remove('on'));
+  el.classList.add('on');
+}
+
+function addProgress() { progress = 0; progressDir = 1; }
+function resetProgress() { progress = 0.5; }
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

@@ -26,6 +26,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-07-15: OpenGL: Fixed texture destruction not deferring until UnusedFrames > 0, inconsistent with all other backends (OpenGL3, DX11, DX12, Metal, Vulkan, WebGPU).
 //  2026-07-15: OpenGL: Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT in UpdateTexture() to avoid corrupting caller GL state. (#8802, #9473)
 //  2026-04-23: OpenGL: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
 //  2026-03-12: OpenGL: Fixed invalid assert in ImGui_ImplOpenGL3_UpdateTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295)
@@ -314,7 +315,7 @@ void ImGui_ImplOpenGL2_UpdateTexture(ImTextureData* tex)
         GL_CALL(glBindTexture(GL_TEXTURE_2D, last_texture)); // Restore state
         tex->SetStatus(ImTextureStatus_OK);
     }
-    else if (tex->Status == ImTextureStatus_WantDestroy)
+    else if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames > 0)
     {
         GLuint gl_tex_id = (GLuint)(intptr_t)tex->TexID;
         glDeleteTextures(1, &gl_tex_id);

@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Upstream](https://img.shields.io/badge/upstream-ocornut%2Fimgui-blue)](https://github.com/ocornut/imgui)
 [![Live Demo](https://img.shields.io/badge/demo-GitHub%20Pages-green)](https://turtle-pb.github.io/imgui_xl/)
-[![PRs](https://img.shields.io/badge/PRs-3%20open-orange)](https://github.com/ocornut/imgui/pulls?q=is%3Aopen+author%3ATurtle-PB)
+[![PRs Merged](https://img.shields.io/badge/upstream%20PRs%20merged-3-brightgreen)](https://github.com/ocornut/imgui/pulls?q=is%3Apr+author%3ATurtle-PB)
 
 > Dear ImGui is a bloat-free graphical user interface library for C++. It outputs optimized vertex buffers that you can render anytime in your 3D-pipeline-enabled application. It is fast, portable, renderer-agnostic, and self-contained (no external dependencies).
 
@@ -13,9 +13,11 @@
 
 | Demo | Description | Link |
 |------|-------------|------|
+| **Live ImGui (WASM)** | Actual Dear ImGui compiled to WebAssembly via Emscripten | [wasm/index.html](https://turtle-pb.github.io/imgui_xl/wasm/index.html) |
 | **Showcase** | Landing page with all demos + PR list | [turtle-pb.github.io/imgui_xl](https://turtle-pb.github.io/imgui_xl/) |
 | **Echonation Visual** | 5-mode audio-reactive canvas demo | [echonation.html](https://turtle-pb.github.io/imgui_xl/echonation.html) |
-| **Pixel OS Model** | Interactive Pixel 8 Pro phone simulator | [pixel_os_demo.html](https://turtle-pb.github.io/imgui_xl/pixel_os_demo.html) |
+| **Widget Playground** | IDE-style demo with hierarchy, properties, console | [widgets_playground.html](https://turtle-pb.github.io/imgui_xl/widgets_playground.html) |
+| **Pixel OS Model** | Interactive Pixel 8 Pro phone simulator with working browser | [pixel_os_demo.html](https://turtle-pb.github.io/imgui_xl/pixel_os_demo.html) |
 
 ## Upstream Contributions
 
@@ -23,27 +25,39 @@ This fork tracks upstream and contributes back via PRs:
 
 | PR | Issue | Description | Status |
 |----|-------|-------------|--------|
-| [#9467](https://github.com/ocornut/imgui/pull/9467) | [#8878](https://github.com/ocornut/imgui/issues/8878) | Android CI: Pin Gradle 9.4.1 via setup-gradle action (no binaries) | Open |
-| [#9468](https://github.com/ocornut/imgui/pull/9468) | [#9390](https://github.com/ocornut/imgui/issues/9390) | Vulkan: Fixed use-after-free in multi-viewport dynamic rendering | Open |
-| [#9469](https://github.com/ocornut/imgui/pull/9469) | [#3446](https://github.com/ocornut/imgui/issues/3446) | Android: Move JNI keyboard/clipboard into backend, add sensors + display | Open |
+| [#9467](https://github.com/ocornut/imgui/pull/9467) | [#8878](https://github.com/ocornut/imgui/issues/8878) | Android CI: Pin Gradle 9.4.1 via setup-gradle action | **MERGED** ✅ |
+| [#9473](https://github.com/ocornut/imgui/pull/9473) | [#8802](https://github.com/ocornut/imgui/issues/8802) | OpenGL2/3: Backup and restore GL_UNPACK state in UpdateTexture() | **MERGED** ✅ |
+| [#9474](https://github.com/ocornut/imgui/pull/9474) | [#6627](https://github.com/ocornut/imgui/issues/6627) | Android: Clear mouse pos on touch release + SDL2: Restore StartTextInput | **MERGED** ✅ |
+| [#9475](https://github.com/ocornut/imgui/pull/9475) | — | OpenGL2: Defer texture destruction until UnusedFrames > 0 | Open |
+| [#9468](https://github.com/ocornut/imgui/pull/9468) | [#9390](https://github.com/ocornut/imgui/issues/9390) | Vulkan: Fixed use-after-free in multi-viewport dynamic rendering | Closed |
+| [#9469](https://github.com/ocornut/imgui/pull/9469) | [#3446](https://github.com/ocornut/imgui/issues/3446) | Android: Move JNI keyboard/clipboard into backend, add display metrics | Open (under review) |
 
-### Backend Improvements (PR #9469)
+### Bug Fixes Summary
 
-- **JNI keyboard/clipboard** — Moved ~120 lines of JNI boilerplate from the example into the backend. App code is now just `Init → Loop → Shutdown`.
-- **8 sensor types** — Accelerometer, gyroscope, magnetometer, light, proximity, pressure, humidity, ambient temperature via NDK ASensor API (no JNI).
-- **Display metrics** — DPI, density, xdpi/ydpi, refresh rate, orientation queried via JNI. Auto-scales ImGui style to actual device density.
-- **Clipboard** — Full clipboard support via JNI to Android ClipboardManager.
-- **Zero binaries** — No jar, no wrapper, no .gitignore changes.
+**Merged upstream (3 PRs):**
+- **Android CI** — Pinned Gradle 9.4.1 via `setup-gradle` action, no binaries (#9467)
+- **OpenGL GL_UNPACK state** — Backup/restore `GL_UNPACK_ROW_LENGTH` and `GL_UNPACK_ALIGNMENT` in UpdateTexture() to prevent caller state corruption (#9473)
+- **Android touch release** — Clear mouse position on `AMOTION_EVENT_ACTION_UP` so buttons don't stay hovered (#6627)
+- **SDL2 soft keyboard** — Restored `SDL_StartTextInput()`/`SDL_StopTextInput()` under `#ifdef __ANDROID__` for on-screen keyboard (#7636)
 
-### CI Fix (PR #9467)
+**Open PRs (2):**
+- **OpenGL2 texture destroy** — Defer destruction until `UnusedFrames > 0`, matching all other backends (#9475)
+- **Android backend cleanup** — Move JNI keyboard/clipboard into backend, add display metrics, breaking change to Init() signature (#9469, under review by Omar)
 
-- Uncommented and updated `setup-gradle@v6` action to pin Gradle 9.4.1 (required by AGP 9.2.0).
-- Single 4-line change to `build.yml`, no binaries added.
+## Go Bindings
 
-### Vulkan Fix (PR #9468)
+This fork includes Go (cgo) bindings for Dear ImGui:
 
-- Deep-copy `SurfaceFormat.format` into persistent buffer in `ImGui_ImplVulkan_CreateWindow()` to prevent use-after-free when viewport is destroyed.
-- Follows the same deep-copy pattern already used in `CreateMainPipeline()`.
+```
+bindings/go/
+  imgui_bridge.h/.cpp  — Thin C API bridge (extern "C")
+  imgui.go             — Go cgo wrapper package
+  README.md            — Full documentation
+
+examples/example_golang/
+  main.go              — Null-mode example
+  Makefile             — Build targets
+```
 
 ## Sync Status
 

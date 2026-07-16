@@ -18,11 +18,20 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 ::-webkit-scrollbar{width:8px;height:8px}
 ::-webkit-scrollbar-track{background:var(--panel)}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#3a3d4a}
 
-#app{display:grid;grid-template-columns:260px 1fr 280px;grid-template-rows:36px 1fr 22px;height:100vh}
-.menubar{grid-column:1/-1;display:flex;align-items:center;gap:0;background:var(--panel);border-bottom:1px solid var(--border);padding:0 8px}
-.mb-item{padding:0 12px;height:36px;display:flex;align-items:center;cursor:pointer;color:var(--dim);font-size:13px}
+#app{display:grid;grid-template-columns:260px 1fr 300px;grid-template-rows:36px 1fr 24px;height:100vh}
+
+/* Menubar with dropdowns */
+.menubar{grid-column:1/-1;display:flex;align-items:center;gap:0;background:var(--panel);border-bottom:1px solid var(--border);padding:0 8px;z-index:100}
+.mb-item{position:relative;padding:0 12px;height:36px;display:flex;align-items:center;cursor:pointer;color:var(--dim);font-size:13px;user-select:none}
 .mb-item:hover{color:var(--bright);background:var(--panel2)}
+.mb-dropdown{display:none;position:absolute;top:36px;left:0;background:var(--panel2);border:1px solid var(--border);border-radius:4px;min-width:180px;box-shadow:0 4px 12px rgba(0,0,0,.4);z-index:200;padding:4px 0}
+.mb-item.open .mb-dropdown{display:block}
+.mb-dd-item{padding:6px 16px;font-size:12px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.mb-dd-item:hover{background:var(--accent);color:#fff}
+.mb-dd-item .mb-dd-shortcut{margin-left:auto;font-family:var(--mono);font-size:10px;opacity:.5}
+.mb-dd-sep{height:1px;background:var(--border);margin:4px 0}
 .mb-sep{width:1px;height:18px;background:var(--border)}
 .mb-spacer{flex:1}
 .mb-right{font-family:var(--mono);font-size:11px;color:var(--dim);padding:0 12px}
@@ -33,151 +42,277 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 .statusbar{grid-column:1/-1;display:flex;align-items:center;background:var(--panel);border-top:1px solid var(--border);padding:0 12px;font-family:var(--mono);font-size:11px;color:var(--dim);gap:12px}
 
 .win{background:var(--panel2);border:1px solid var(--border);border-radius:4px;margin-bottom:8px;overflow:hidden}
-.win-header{padding:6px 10px;font-size:12px;font-weight:600;color:var(--bright);border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);cursor:default;display:flex;align-items:center;gap:6px}
+.win-header{padding:6px 10px;font-size:12px;font-weight:600;color:var(--bright);border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);display:flex;align-items:center;gap:6px}
 .win-body{padding:8px 10px;display:flex;flex-direction:column;gap:6px}
-.row{display:flex;align-items:center;gap:8px;min-height:22px}
+.row{display:flex;align-items:center;gap:8px;min-height:24px}
 .label{font-size:12px;color:var(--dim);min-width:70px;flex-shrink:0}
 .value{font-family:var(--mono);font-size:12px;color:var(--bright)}
 
 .btn{padding:5px 14px;background:var(--panel);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;cursor:pointer;transition:all .15s}
-.btn:hover{border-color:var(--border-active);color:var(--bright)}
+.btn:hover{border-color:var(--border-active);color:var(--bright);background:var(--panel2)}
 .btn:active{background:var(--accent);color:#fff}
-.btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#3a8eef}
 
 .chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;user-select:none}
-.chk-box{width:16px;height:16px;border:1px solid var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center}
+.chk-box{width:16px;height:16px;border:1px solid var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.chk:hover .chk-box{border-color:var(--accent)}
 .chk.on .chk-box{background:var(--accent);border-color:var(--accent)}
 .chk.on .chk-box::after{content:'';width:8px;height:4px;border:1.5px solid #fff;border-top:none;border-right:none;transform:rotate(-45deg) translateY(-1px)}
 
-.slider{flex:1;height:24px;display:flex;align-items:center;cursor:pointer}
+.slider{flex:1;height:24px;display:flex;align-items:center;cursor:pointer;position:relative}
 .slider-track{width:100%;height:4px;background:var(--input);border-radius:2px;position:relative}
-.slider-fill{height:100%;background:var(--accent);border-radius:2px}
-.slider-knob{position:absolute;top:50%;width:10px;height:20px;background:var(--panel);border:1px solid var(--accent);border-radius:2px;transform:translate(-50%,-50%);box-shadow:0 0 4px rgba(74,158,255,.15)}
+.slider-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .05s}
+.slider-knob{position:absolute;top:50%;width:12px;height:20px;background:var(--panel);border:1px solid var(--accent);border-radius:2px;transform:translate(-50%,-50%);box-shadow:0 0 4px rgba(74,158,255,.15);transition:left .05s}
+.slider-value{font-family:var(--mono);font-size:11px;color:var(--dim);min-width:36px;text-align:right}
 
 .rdio{display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;user-select:none}
-.rdio-dot{width:14px;height:14px;border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.rdio-dot{width:14px;height:14px;border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .rdio.on .rdio-dot{border-color:var(--accent)}
 .rdio.on .rdio-dot::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent)}
 
-.color-prev{width:28px;height:18px;border-radius:2px;border:1px solid var(--border);display:inline-block}
-.tab{padding:4px 12px;font-size:12px;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent}
+.color-prev{width:28px;height:18px;border-radius:2px;border:1px solid var(--border);display:inline-block;cursor:pointer;flex-shrink:0}
+.tab{padding:4px 12px;font-size:12px;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;user-select:none}
 .tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:hover:not(.on){color:var(--text)}
 
 .canvas-area{position:absolute;inset:0}
 canvas{display:block}
 .overlay-text{position:absolute;font-family:var(--mono);font-size:11px;color:var(--dim);pointer-events:none;text-shadow:0 0 4px var(--bg)}
 
-.tree-node{cursor:pointer;font-size:12px;padding:3px 0;color:var(--dim)}
+.tree-node{cursor:pointer;font-size:12px;padding:3px 0;color:var(--dim);user-select:none;display:flex;align-items:center;gap:4px}
 .tree-node:hover{color:var(--text)}
 .tree-node.sel{color:var(--accent)}
-.tree-children{padding-left:14px}
+.tree-children{padding-left:16px;display:none}
+.tree-children.open{display:block}
+.tree-toggle{width:12px;text-align:center;font-size:10px;color:var(--dim)}
+.tree-toggle.open{transform:rotate(90deg)}
 
 .progress{width:100%;height:8px;background:var(--input);border-radius:4px;overflow:hidden}
 .progress-bar{height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
+
+.input-field{background:var(--input);border:1px solid var(--border);border-radius:3px;padding:4px 8px;color:var(--bright);font-size:12px;font-family:var(--mono);outline:none;flex:1;min-width:0}
+.input-field:focus{border-color:var(--accent)}
+.input-field::placeholder{color:var(--dim)}
+
+.console-line{font-family:var(--mono);font-size:11px;padding:2px 0;white-space:pre-wrap;word-break:break-all}
+.console-input{display:flex;gap:6px;align-items:center;padding-top:4px;border-top:1px solid var(--border);margin-top:4px}
+.console-prompt{color:var(--green);font-family:var(--mono);font-size:11px}
+
+.color-popup{position:absolute;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:8px;z-index:300;display:none;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.color-popup.open{display:block}
+.color-swatch{display:inline-block;width:20px;height:20px;border-radius:3px;cursor:pointer;margin:2px;border:1px solid rgba(255,255,255,.1)}
+.color-swatch:hover{transform:scale(1.15)}
 </style>
 </head>
 <body>
 <div id="app">
+  <!-- MENUBAR WITH WORKING DROPDOWNS -->
   <div class="menubar">
-    <div class="mb-item">File</div>
-    <div class="mb-item">Edit</div>
-    <div class="mb-item">View</div>
-    <div class="mb-item">Widgets</div>
-    <div class="mb-item">Tools</div>
+    <div class="mb-item" id="mb-file" onclick="toggleMenu('mb-file')">
+      File
+      <div class="mb-dropdown">
+        <div class="mb-dd-item" onclick="newProject()"><span>📄</span> New<span class="mb-dd-shortcut">Ctrl+N</span></div>
+        <div class="mb-dd-item" onclick="exportLayout()"><span>💾</span> Export Layout<span class="mb-dd-shortcut">Ctrl+E</span></div>
+        <div class="mb-dd-sep"></div>
+        <div class="mb-dd-item" onclick="menuAction('Quit')"><span>🚪</span> Quit</div>
+      </div>
+    </div>
+    <div class="mb-item" id="mb-edit" onclick="toggleMenu('mb-edit')">
+      Edit
+      <div class="mb-dropdown">
+        <div class="mb-dd-item" onclick="menuAction('Undo')"><span>↶</span> Undo<span class="mb-dd-shortcut">Ctrl+Z</span></div>
+        <div class="mb-dd-item" onclick="menuAction('Redo')"><span>↷</span> Redo<span class="mb-dd-shortcut">Ctrl+Y</span></div>
+        <div class="mb-dd-sep"></div>
+        <div class="mb-dd-item" onclick="menuAction('Copy')"><span>📋</span> Copy<span class="mb-dd-shortcut">Ctrl+C</span></div>
+        <div class="mb-dd-item" onclick="menuAction('Paste')"><span>📌</span> Paste<span class="mb-dd-shortcut">Ctrl+V</span></div>
+        <div class="mb-dd-item" onclick="menuAction('Delete')"><span>🗑️</span> Delete<span class="mb-dd-shortcut">Del</span></div>
+      </div>
+    </div>
+    <div class="mb-item" id="mb-view" onclick="toggleMenu('mb-view')">
+      View
+      <div class="mb-dropdown">
+        <div class="mb-dd-item" onclick="togglePanel('leftPanel')"><span> ◀</span> Toggle Left Panel</div>
+        <div class="mb-dd-item" onclick="togglePanel('rightPanel')"><span>▶ </span> Toggle Right Panel</div>
+        <div class="mb-dd-sep"></div>
+        <div class="mb-dd-item" onclick="setDarkMode(true)"><span>🌙</span> Dark Mode</div>
+        <div class="mb-dd-item" onclick="setDarkMode(false)"><span>☀️</span> Light Mode</div>
+      </div>
+    </div>
+    <div class="mb-item" id="mb-widgets" onclick="toggleMenu('mb-widgets')">
+      Widgets
+      <div class="mb-dropdown">
+        <div class="mb-dd-item" onclick="addWidget('Button')"><span>🔘</span> Add Button</div>
+        <div class="mb-dd-item" onclick="addWidget('Slider')"><span>🎚️</span> Add Slider</div>
+        <div class="mb-dd-item" onclick="addWidget('Checkbox')"><span>☑️</span> Add Checkbox</div>
+        <div class="mb-dd-item" onclick="addWidget('ColorEdit')"><span>🎨</span> Add ColorEdit</div>
+        <div class="mb-dd-item" onclick="addWidget('InputText')"><span>⌨️</span> Add InputText</div>
+        <div class="mb-dd-sep"></div>
+        <div class="mb-dd-item" onclick="clearWidgets()"><span>🧹</span> Clear All Widgets</div>
+      </div>
+    </div>
+    <div class="mb-item" id="mb-tools" onclick="toggleMenu('mb-tools')">
+      Tools
+      <div class="mb-dropdown">
+        <div class="mb-dd-item" onclick="randomizeColors()"><span>🎲</span> Randomize Colors</div>
+        <div class="mb-dd-item" onclick="pulseCanvas()"><span>💥</span> Pulse Effect</div>
+        <div class="mb-dd-sep"></div>
+        <div class="mb-dd-item" onclick="window.open('https://github.com/Turtle-PB/imgui_xl','_blank')"><span>📂</span> GitHub Repo</div>
+        <div class="mb-dd-item" onclick="window.open('https://turtle-pb.github.io/imgui_xl/wasm/index.html','_blank')"><span>⚡</span> Live ImGui (WASM)</div>
+      </div>
+    </div>
     <div class="mb-sep"></div>
-    <div class="mb-item">Help</div>
+    <div class="mb-item" id="mb-help" onclick="toggleMenu('mb-help')">
+      Help
+      <div class="mb-dropdown">
+        <div class="mb-dd-item" onclick="showAbout()"><span>ℹ️</span> About</div>
+        <div class="mb-dd-item" onclick="menuAction('Documentation')"><span>📚</span> Documentation</div>
+        <div class="mb-dd-item" onclick="menuAction('Report Bug')"><span>🐛</span> Report Bug</div>
+      </div>
+    </div>
     <div class="mb-spacer"></div>
     <div class="mb-right" id="fps-display">60.0 FPS</div>
     <div class="mb-sep"></div>
     <div class="mb-right" id="frame-display">0 frames</div>
   </div>
 
-  <div class="left-panel">
+  <!-- LEFT PANEL: HIERARCHY + SCENE -->
+  <div class="left-panel" id="leftPanel">
     <div class="win">
-      <div class="win-header">Hierarchy</div>
+      <div class="win-header">📋 Hierarchy</div>
       <div class="win-body">
-        <div class="tree-node sel">Viewport</div>
-        <div class="tree-children">
-          <div class="tree-node">Main Window</div>
-          <div class="tree-children">
-            <div class="tree-node">Slider</div>
-            <div class="tree-node">Button Group</div>
-            <div class="tree-node">Color Picker</div>
+        <div class="tree-node" onclick="selectNode(this,'Viewport')"><span class="tree-toggle open" onclick="toggleTree(this);event.stopPropagation()">▶</span> Viewport</div>
+        <div class="tree-children open" id="tree-main">
+          <div class="tree-node sel" onclick="selectNode(this,'MainWindow')"><span class="tree-toggle" onclick="toggleTree(this);event.stopPropagation()">▶</span> Main Window</div>
+          <div class="tree-children" id="tree-mainwin">
+            <div class="tree-node" onclick="selectNode(this,'Slider')"><span>🎚️</span> Slider</div>
+            <div class="tree-node" onclick="selectNode(this,'ButtonGroup')"><span>🔘</span> Button Group</div>
+            <div class="tree-node" onclick="selectNode(this,'ColorPicker')"><span>🎨</span> Color Picker</div>
+            <div class="tree-node" onclick="selectNode(this,'TextInput')"><span>⌨️</span> Text Input</div>
           </div>
-          <div class="tree-node">Metrics Panel</div>
-          <div class="tree-node">Canvas Renderer</div>
+          <div class="tree-node" onclick="selectNode(this,'MetricsPanel')"><span>📊</span> Metrics Panel</div>
+          <div class="tree-node" onclick="selectNode(this,'CanvasRenderer')"><span>🖼️</span> Canvas Renderer</div>
         </div>
       </div>
     </div>
     <div class="win">
-      <div class="win-header">Scene Settings</div>
+      <div class="win-header">⚙️ Scene Settings</div>
       <div class="win-body">
-        <div class="chk on" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Show Grid</div>
-        <div class="chk on" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Show FPS</div>
-        <div class="chk" onclick="this.classList.toggle('on')"><span class="chk-box"></span> VSync</div>
-        <div class="chk on" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Anti-Aliasing</div>
+        <div class="chk on" onclick="this.classList.toggle('on');toggleSceneSetting('grid',this.classList.contains('on'))"><span class="chk-box"></span> Show Grid</div>
+        <div class="chk on" onclick="this.classList.toggle('on');toggleSceneSetting('fps',this.classList.contains('on'))"><span class="chk-box"></span> Show FPS</div>
+        <div class="chk" onclick="this.classList.toggle('on');toggleSceneSetting('vsync',this.classList.contains('on'))"><span class="chk-box"></span> VSync</div>
+        <div class="chk on" onclick="this.classList.toggle('on');toggleSceneSetting('aa',this.classList.contains('on'))"><span class="chk-box"></span> Anti-Aliasing</div>
+      </div>
+    </div>
+    <div class="win">
+      <div class="win-header">📝 Notes</div>
+      <div class="win-body">
+        <textarea class="input-field" rows="3" placeholder="Write notes..." style="resize:vertical;min-height:40px;-webkit-user-select:text;user-select:text"></textarea>
       </div>
     </div>
   </div>
 
-  <div class="viewport">
+  <!-- VIEWPORT: CANVAS -->
+  <div class="viewport" id="viewport">
     <div class="canvas-area"><canvas id="canvas"></canvas></div>
     <div class="overlay-text" style="top:8px;left:8px">## Viewport — Widget Playground</div>
     <div class="overlay-text" style="bottom:8px;left:8px" id="canvas-stats">Render: 0 draw calls</div>
   </div>
 
-  <div class="right-panel">
+  <!-- RIGHT PANEL: PROPERTIES + WIDGET DEMO + CONSOLE -->
+  <div class="right-panel" id="rightPanel">
+    <!-- PROPERTIES -->
     <div class="win">
-      <div class="win-header">Properties</div>
+      <div class="win-header">🔧 Properties</div>
       <div class="win-body">
-        <div class="row"><span class="label">Name</span><span class="value">ButtonWidget</span></div>
-        <div class="row"><span class="label">Type</span><span class="value">ImGui::Button</span></div>
+        <div class="row"><span class="label">Name</span><span class="value" id="prop-name">ButtonWidget</span></div>
+        <div class="row"><span class="label">Type</span><span class="value" id="prop-type">ImGui::Button</span></div>
         <div class="row"><span class="label">Size X</span>
-          <div class="slider" id="sz-x" data-val="0.3"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+          <div class="slider" data-target="btnW" data-val="0.4" data-min="20" data-max="300"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+          <span class="slider-value" id="val-btnW">120</span>
         </div>
         <div class="row"><span class="label">Size Y</span>
-          <div class="slider" id="sz-y" data-val="0.15"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+          <div class="slider" data-target="btnH" data-val="0.15" data-min="10" data-max="100"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+          <span class="slider-value" id="val-btnH">36</span>
         </div>
         <div class="row"><span class="label">Color</span>
-          <span class="color-prev" id="color-prev" style="background:#4a9eff"></span>
+          <span class="color-prev" id="color-prev" style="background:#4a9eff" onclick="toggleColorPopup()"></span>
           <span class="value" id="color-val">#4a9eff</span>
+          <div class="color-popup" id="color-popup">
+            <div class="color-swatch" style="background:#4a9eff" onclick="setColor('#4a9eff')"></div>
+            <div class="color-swatch" style="background:#5cb85c" onclick="setColor('#5cb85c')"></div>
+            <div class="color-swatch" style="background:#f0ad4e" onclick="setColor('#f0ad4e')"></div>
+            <div class="color-swatch" style="background:#d9534f" onclick="setColor('#d9534f')"></div>
+            <div class="color-swatch" style="background:#ab47bc" onclick="setColor('#ab47bc')"></div>
+            <div class="color-swatch" style="background:#26a69a" onclick="setColor('#26a69a')"></div>
+            <div class="color-swatch" style="background:#ec407a" onclick="setColor('#ec407a')"></div>
+            <div class="color-swatch" style="background:#7e57c2" onclick="setColor('#7e57c2')"></div>
+            <div class="color-swatch" style="background:#78909c" onclick="setColor('#78909c')"></div>
+            <div class="color-swatch" style="background:#000000" onclick="setColor('#000000')"></div>
+            <div class="color-swatch" style="background:#ffffff" onclick="setColor('#ffffff')"></div>
+            <div class="color-swatch" style="background:#ff5722" onclick="setColor('#ff5722')"></div>
+          </div>
+        </div>
+        <div class="row"><span class="label">Visible</span>
+          <div class="chk on" onclick="this.classList.toggle('on');toggleProp('visible',this.classList.contains('on'))"><span class="chk-box"></span> Visible</div>
+        </div>
+        <div class="row"><span class="label">Enabled</span>
+          <div class="chk on" onclick="this.classList.toggle('on');toggleProp('enabled',this.classList.contains('on'))"><span class="chk-box"></span> Enabled</div>
         </div>
       </div>
     </div>
+
+    <!-- WIDGET DEMO WITH TABS -->
     <div class="win">
-      <div class="win-header">Widget Demo</div>
+      <div class="win-header">🎨 Widget Demo</div>
       <div class="win-body">
-        <div class="row"><span class="label">Tabs:</span></div>
-        <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:4px">
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:6px">
           <div class="tab on" onclick="setTab(this,0)">Main</div>
           <div class="tab" onclick="setTab(this,1)">Advanced</div>
           <div class="tab" onclick="setTab(this,2)">Metrics</div>
         </div>
         <div id="tab-0">
           <div class="row"><span class="label">Float</span>
-            <div class="slider" id="f1" data-val="0.5"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+            <div class="slider" data-target="floatVal" data-val="0.5" data-min="0" data-max="1"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+            <span class="slider-value" id="val-floatVal">0.50</span>
           </div>
           <div class="row"><span class="label">Int</span>
-            <div class="slider" id="i1" data-val="0.3"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+            <div class="slider" data-target="intVal" data-val="0.3" data-min="0" data-max="100"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+            <span class="slider-value" id="val-intVal">30</span>
+          </div>
+          <div class="row"><span class="label">Speed</span>
+            <div class="slider" data-target="speed" data-val="0.3" data-min="0.1" data-max="5"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+            <span class="slider-value" id="val-speed">1.5</span>
           </div>
           <div class="row" style="gap:4px">
-            <button class="btn" onclick="addProgress()">Add Progress</button>
-            <button class="btn" onclick="resetProgress()">Reset</button>
+            <button class="btn" onclick="addProgress()">📈 Animate</button>
+            <button class="btn" onclick="resetProgress()">↺ Reset</button>
           </div>
           <div class="row"><span class="label">Progress</span></div>
           <div class="progress"><div class="progress-bar" id="prog-bar" style="width:50%"></div></div>
+          <div class="row"><span class="label">Input</span>
+            <input class="input-field" type="text" id="text-input" placeholder="Type here..." value="Hello ImGui" -webkit-user-select:text;user-select:text; oninput="onTextInput(this.value)">
+          </div>
+          <div class="row"><span class="label">Preview</span><span class="value" id="text-preview">Hello ImGui</span></div>
         </div>
         <div id="tab-1" style="display:none">
           <div class="chk on" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Enabled</div>
           <div class="chk on" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Visible</div>
           <div class="chk" onclick="this.classList.toggle('on')"><span class="chk-box"></span> No Background</div>
           <div class="chk" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Mouse Input</div>
+          <div class="chk on" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Keyboard Input</div>
           <div class="row"><span class="label">Radio:</span></div>
           <div style="display:flex;gap:12px">
-            <div class="rdio on" onclick="setRadio(this)"><span class="rdio-dot"></span> A</div>
-            <div class="rdio" onclick="setRadio(this)"><span class="rdio-dot"></span> B</div>
-            <div class="rdio" onclick="setRadio(this)"><span class="rdio-dot"></span> C</div>
+            <div class="rdio on" onclick="setRadio(this)"><span class="rdio-dot"></span> Option A</div>
+            <div class="rdio" onclick="setRadio(this)"><span class="rdio-dot"></span> Option B</div>
+            <div class="rdio" onclick="setRadio(this)"><span class="rdio-dot"></span> Option C</div>
           </div>
+          <div class="row"><span class="label">Select:</span></div>
+          <select class="input-field" onchange="menuAction('Selected: '+this.value)">
+            <option>Linear</option>
+            <option>Nearest</option>
+            <option>Cubic</option>
+          </select>
         </div>
         <div id="tab-2" style="display:none">
           <div class="row"><span class="label">FPS</span><span class="value" id="m-fps">60.0</span></div>
@@ -188,31 +323,54 @@ canvas{display:block}
         </div>
       </div>
     </div>
+
+    <!-- CONSOLE WITH INPUT -->
     <div class="win">
-      <div class="win-header">Console</div>
-      <div class="win-body" style="font-family:var(--mono);font-size:11px">
-        <div style="color:var(--green)">[INFO] ImGui context created</div>
-        <div style="color:var(--green)">[INFO] Dark style applied</div>
-        <div style="color:var(--dim)">[INFO] Rendering 60 FPS</div>
-        <div style="color:var(--orange)">[WARN] No backend attached</div>
-        <div style="color:var(--dim)">[INFO] Running in canvas mode</div>
-        <div id="console-log" style="color:var(--accent)"></div>
+      <div class="win-header">🖥️ Console</div>
+      <div class="win-body" style="font-family:var(--mono);font-size:11px;max-height:200px;overflow-y:auto" id="console-body">
+        <div class="console-line" style="color:var(--green)">[INFO] ImGui context created</div>
+        <div class="console-line" style="color:var(--green)">[INFO] Dark style applied</div>
+        <div class="console-line" style="color:var(--dim)">[INFO] Rendering at 60 FPS</div>
+        <div class="console-line" style="color:var(--orange)">[WARN] Running in canvas mode (no backend)</div>
+        <div class="console-line" style="color:var(--dim)">[INFO] Widget Playground ready</div>
+      </div>
+      <div style="padding:6px 10px;border-top:1px solid var(--border)">
+        <div class="console-input">
+          <span class="console-prompt">$</span>
+          <input class="input-field" id="console-input-field" placeholder="Type a command... (help, clear, fps, color)" -webkit-user-select:text;user-select:text; onkeydown="if(event.key==='Enter')runConsoleCommand(this.value)">
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- STATUS BAR -->
   <div class="statusbar">
-    <span>imgui_xl Widget Playground</span>
+    <span>ImGui Widget Playground</span>
     <span>|</span>
     <span id="sb-fps">60.0 FPS</span>
     <span>|</span>
     <span id="sb-draws">0 draws</span>
+    <span>|</span>
+    <span id="sb-selected">Selected: Viewport</span>
     <span style="flex:1"></span>
-    <span style="color:var(--green)">Ready</span>
+    <span style="color:var(--green)" id="sb-status">Ready</span>
   </div>
 </div>
 
 <script>
+// === STATE ===
+const state = {
+  btnW: 120, btnH: 36, floatVal: 0.5, intVal: 30, speed: 1.5,
+  color: '#4a9eff',
+  progress: 0.5, progressDir: 1, progressActive: true,
+  textInput: 'Hello ImGui',
+  selectedNode: 'Viewport',
+  sceneGrid: true, sceneFPS: true, sceneAA: true,
+  darkMode: true,
+  widgets: []
+};
+
+// === CANVAS ===
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 let W = 0, H = 0, DPR = window.devicePixelRatio || 1;
@@ -228,8 +386,8 @@ resize();
 
 let frame = 0, startTime = performance.now(), lastTime = 0;
 let fps = 60, frameTime = 16.67;
-let progress = 0.5, progressDir = 1;
 let drawCalls = 0, vertices = 0;
+let pulseAmt = 0;
 
 function loop(ts) {
   const dt = (ts - lastTime) / 1000;
@@ -237,78 +395,95 @@ function loop(ts) {
   const t = (ts - startTime) / 1000;
   if (dt > 0) { fps = 0.9 * fps + 0.1 * (1/dt); frameTime = dt * 1000; }
 
-  // Draw grid background
-  ctx.fillStyle = '#0d0e12';
+  // Background
+  ctx.fillStyle = state.darkMode ? '#0d0e12' : '#f5f5f5';
   ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = '#161821';
-  ctx.lineWidth = 1;
-  const gridSize = 40;
-  for (let x = 0; x < W; x += gridSize) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-  }
-  for (let y = 0; y < H; y += gridSize) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-  }
 
-  // Draw animated widget previews
   drawCalls = 0; vertices = 0;
 
-  // Button preview
-  const btnW = 120 + Math.sin(t) * 20;
-  const btnH = 36;
+  // Grid
+  if (state.sceneGrid) {
+    ctx.strokeStyle = state.darkMode ? '#161821' : '#e0e0e0';
+    ctx.lineWidth = 1;
+    const gs = 40;
+    for (let x = 0; x < W; x += gs) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y < H; y += gs) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  }
+
+  // Button widget on canvas
+  const speed = state.speed;
+  const btnW = state.btnW + Math.sin(t * speed) * 20;
+  const btnH = state.btnH;
   const btnX = W/2 - btnW/2;
   const btnY = H/2 - 80;
   const btnHover = mouseX > btnX && mouseX < btnX+btnW && mouseY > btnY && mouseY < btnY+btnH;
-  ctx.fillStyle = btnHover ? '#4a9eff' : '#1c1f2b';
-  ctx.strokeStyle = btnHover ? '#4a9eff' : '#2a2d3a';
+
+  // Pulse effect
+  if (pulseAmt > 0) {
+    ctx.fillStyle = `rgba(74,158,255,${pulseAmt * 0.3})`;
+    ctx.fillRect(btnX - 20, btnY - 20, btnW + 40, btnH + 40);
+    pulseAmt -= 0.02;
+  }
+
+  ctx.fillStyle = btnHover ? state.color : (state.darkMode ? '#1c1f2b' : '#e0e0e0');
+  ctx.strokeStyle = btnHover ? state.color : (state.darkMode ? '#2a2d3a' : '#bbb');
   ctx.lineWidth = 1;
   ctx.fillRect(btnX, btnY, btnW, btnH);
   ctx.strokeRect(btnX, btnY, btnW, btnH);
-  ctx.fillStyle = btnHover ? '#fff' : '#c8cdd9';
+  ctx.fillStyle = btnHover ? '#fff' : (state.darkMode ? '#c8cdd9' : '#333');
   ctx.font = '13px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('Click Me!', btnX + btnW/2, btnY + btnH/2 + 4);
   drawCalls++; vertices += 6;
 
-  // Slider preview
-  const sliderY = btnY + 60;
-  ctx.strokeStyle = '#2a2d3a';
-  ctx.fillStyle = '#0a0b0f';
-  ctx.fillRect(W/2 - 100, sliderY, 200, 4);
-  const sliderPos = 100 + Math.sin(t * 0.5) * 80;
-  ctx.fillStyle = '#4a9eff';
-  ctx.fillRect(W/2 - 100, sliderY, sliderPos, 4);
-  ctx.fillRect(W/2 - 100 + sliderPos - 5, sliderY - 8, 10, 20);
+  // Slider widget on canvas
+  const slY = btnY + 60;
+  ctx.fillStyle = state.darkMode ? '#0a0b0f' : '#eee';
+  ctx.fillRect(W/2 - 100, slY, 200, 4);
+  const slPos = state.floatVal * 200;
+  ctx.fillStyle = state.color;
+  ctx.fillRect(W/2 - 100, slY, slPos, 4);
+  ctx.fillRect(W/2 - 100 + slPos - 6, slY - 8, 12, 20);
   drawCalls += 2; vertices += 12;
 
-  // Color preview circle
-  const colorY = sliderY + 40;
-  const hue = (t * 60) % 360;
+  // Color circles
+  const clY = slY + 40;
+  const hue = (t * 60 * speed) % 360;
   for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + t;
+    const a = (i / 8) * Math.PI * 2 + t * speed * 0.5;
     const r = 30 + Math.sin(t * 2 + i) * 5;
     const cx = W/2 + Math.cos(a) * r;
-    const cy = colorY + Math.sin(a) * r;
+    const cy = clY + Math.sin(a) * r;
     ctx.beginPath();
-    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
     ctx.fillStyle = `hsl(${(hue + i * 45) % 360}, 70%, 60%)`;
     ctx.fill();
   }
   drawCalls += 8; vertices += 32;
 
   // Progress bar
-  progress += progressDir * 0.005;
-  if (progress > 1) { progress = 1; progressDir = -1; }
-  if (progress < 0) { progress = 0; progressDir = 1; }
-  document.getElementById('prog-bar').style.width = (progress * 100) + '%';
+  if (state.progressActive) {
+    state.progress += state.progressDir * 0.005 * speed;
+    if (state.progress > 1) { state.progress = 1; state.progressDir = -1; }
+    if (state.progress < 0) { state.progress = 0; state.progressDir = 1; }
+    document.getElementById('prog-bar').style.width = (state.progress * 100) + '%';
+  }
 
-  // Text overlay
+  // Code overlay
   ctx.textAlign = 'left';
   ctx.font = '11px monospace';
-  ctx.fillStyle = '#6b7080';
-  ctx.fillText('ImGui::Button("Click Me!", ImVec2(' + btnW.toFixed(0) + ', ' + btnH + '))', 16, H - 40);
+  ctx.fillStyle = state.darkMode ? '#6b7080' : '#999';
+  ctx.fillText('ImGui::Button("Click Me!", ImVec2(' + Math.round(btnW) + ', ' + btnH + '))', 16, H - 40);
   ctx.fillText('ImGui::SliderFloat("Float", &v, 0.0f, 1.0f)', 16, H - 25);
   ctx.fillText('ImGui::ColorEdit3("Color", &col[0])', 16, H - 10);
+
+  // FPS overlay
+  if (state.sceneFPS) {
+    ctx.font = 'bold 14px monospace';
+    ctx.fillStyle = '#5cb85c';
+    ctx.textAlign = 'right';
+    ctx.fillText(fps.toFixed(0) + ' FPS', W - 16, 24);
+  }
 
   frame++;
 
@@ -334,52 +509,252 @@ canvas.addEventListener('mousemove', e => {
   mouseX = e.clientX - rect.left;
   mouseY = e.clientY - rect.top;
 });
-
 canvas.addEventListener('click', () => {
-  const el = document.getElementById('console-log');
-  el.textContent = '[INFO] Button clicked at frame ' + frame;
+  pulseAmt = 1;
   const color = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
+  state.color = color;
   document.getElementById('color-prev').style.background = color;
   document.getElementById('color-val').textContent = color;
+  logConsole('[INFO] Button clicked — color set to ' + color, 'accent');
 });
 
-// Sliders
+// === MENUS ===
+function toggleMenu(id) {
+  const el = document.getElementById(id);
+  const wasOpen = el.classList.contains('open');
+  document.querySelectorAll('.mb-item.open').forEach(m => m.classList.remove('open'));
+  if (!wasOpen) el.classList.add('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.mb-item')) {
+    document.querySelectorAll('.mb-item.open').forEach(m => m.classList.remove('open'));
+  }
+});
+
+function menuAction(name) {
+  logConsole('[INFO] ' + name, 'accent');
+  setStatus(name);
+}
+
+function newProject() {
+  state.widgets = [];
+  logConsole('[INFO] New project created', 'green');
+  setStatus('New Project');
+}
+
+function exportLayout() {
+  const data = JSON.stringify(state, null, 2);
+  logConsole('[INFO] Layout exported (' + data.length + ' bytes)', 'green');
+  navigator.clipboard?.writeText(data);
+  setStatus('Layout Copied to Clipboard');
+}
+
+function addWidget(type) {
+  state.widgets.push({type, id: state.widgets.length});
+  logConsole('[INFO] Added ' + type + ' widget (total: ' + state.widgets.length + ')', 'accent');
+  setStatus('Added ' + type);
+}
+
+function clearWidgets() {
+  state.widgets = [];
+  logConsole('[WARN] All widgets cleared', 'orange');
+  setStatus('Widgets Cleared');
+}
+
+function randomizeColors() {
+  const color = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
+  state.color = color;
+  document.getElementById('color-prev').style.background = color;
+  document.getElementById('color-val').textContent = color;
+  logConsole('[INFO] Color randomized to ' + color, 'accent');
+}
+
+function pulseCanvas() {
+  pulseAmt = 1;
+  logConsole('[INFO] Pulse effect triggered', 'accent');
+}
+
+function showAbout() {
+  logConsole('[INFO] ImGui Widget Playground — imgui_xl', 'green');
+  logConsole('[INFO] Part of Turtle-PB/imgui_xl — MIT License', 'dim');
+  logConsole('[INFO] 3 PRs merged upstream, 5 live demos', 'dim');
+}
+
+// === PANELS ===
+function togglePanel(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? '' : 'none';
+  setTimeout(resize, 10);
+}
+
+function setDarkMode(dark) {
+  state.darkMode = dark;
+  document.documentElement.style.setProperty('--bg', dark ? '#0d0e12' : '#f5f5f5');
+  document.documentElement.style.setProperty('--panel', dark ? '#161821' : '#ffffff');
+  document.documentElement.style.setProperty('--panel2', dark ? '#1c1f2b' : '#e8e8e8');
+  document.documentElement.style.setProperty('--text', dark ? '#c8cdd9' : '#333');
+  document.documentElement.style.setProperty('--border', dark ? '#2a2d3a' : '#ddd');
+  document.documentElement.style.setProperty('--dim', dark ? '#6b7080' : '#888');
+  document.documentElement.style.setProperty('--bright', dark ? '#e8eaf0' : '#111');
+  document.documentElement.style.setProperty('--input', dark ? '#0a0b0f' : '#f0f0f0');
+  logConsole('[INFO] ' + (dark ? 'Dark' : 'Light') + ' mode enabled', 'green');
+}
+
+// === TREE ===
+function toggleTree(el) {
+  el.classList.toggle('open');
+  const next = el.parentElement.nextElementSibling;
+  if (next && next.classList.contains('tree-children')) {
+    next.classList.toggle('open');
+  }
+}
+
+function selectNode(el, name) {
+  document.querySelectorAll('.tree-node').forEach(n => n.classList.remove('sel'));
+  el.classList.add('sel');
+  state.selectedNode = name;
+  document.getElementById('prop-name').textContent = name;
+  document.getElementById('sb-selected').textContent = 'Selected: ' + name;
+}
+
+// === SLIDERS ===
 document.querySelectorAll('.slider').forEach(s => {
   let dragging = false;
+  const target = s.dataset.target;
+  const minVal = parseFloat(s.dataset.min || 0);
+  const maxVal = parseFloat(s.dataset.max || 1);
   const update = e => {
     const r = s.getBoundingClientRect();
-    const v = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    let v = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
     s.dataset.val = v;
     s.querySelector('.slider-fill').style.width = (v*100)+'%';
     s.querySelector('.slider-knob').style.left = (v*100)+'%';
+    const realVal = minVal + v * (maxVal - minVal);
+    state[target] = realVal;
+    const valEl = document.getElementById('val-' + target);
+    if (valEl) {
+      if (target === 'floatVal' || target === 'speed') valEl.textContent = realVal.toFixed(2);
+      else valEl.textContent = Math.round(realVal);
+    }
   };
   s.addEventListener('mousedown', e => { dragging = true; update(e); });
   window.addEventListener('mousemove', e => { if(dragging) update(e); });
   window.addEventListener('mouseup', () => dragging = false);
 });
-
-// Init sliders
 document.querySelectorAll('.slider').forEach(s => {
   const v = parseFloat(s.dataset.val || 0.5);
   s.querySelector('.slider-fill').style.width = (v*100)+'%';
   s.querySelector('.slider-knob').style.left = (v*100)+'%';
 });
 
+// === TABS ===
 function setTab(el, idx) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
   el.classList.add('on');
   [0,1,2].forEach(i => {
-    document.getElementById('tab-' + i).style.display = i === idx ? '' : 'none';
+    const t = document.getElementById('tab-' + i);
+    if (t) t.style.display = i === idx ? '' : 'none';
   });
 }
 
+// === RADIO ===
 function setRadio(el) {
   el.parentElement.querySelectorAll('.rdio').forEach(r => r.classList.remove('on'));
   el.classList.add('on');
+  logConsole('[INFO] Radio: ' + el.textContent.trim(), 'dim');
 }
 
-function addProgress() { progress = 0; progressDir = 1; }
-function resetProgress() { progress = 0.5; }
+// === COLOR POPUP ===
+function toggleColorPopup() {
+  document.getElementById('color-popup').classList.toggle('open');
+}
+function setColor(c) {
+  state.color = c;
+  document.getElementById('color-prev').style.background = c;
+  document.getElementById('color-val').textContent = c;
+  document.getElementById('color-popup').classList.remove('open');
+  logConsole('[INFO] Color set to ' + c, 'accent');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#color-prev') && !e.target.closest('#color-popup')) {
+    document.getElementById('color-popup').classList.remove('open');
+  }
+});
+
+// === PROGRESS ===
+function addProgress() { state.progressActive = true; state.progress = 0; state.progressDir = 1; }
+function resetProgress() { state.progress = 0.5; state.progressActive = false; document.getElementById('prog-bar').style.width = '50%'; }
+
+// === TEXT INPUT ===
+function onTextInput(val) {
+  state.textInput = val;
+  document.getElementById('text-preview').textContent = val;
+}
+
+// === SCENE SETTINGS ===
+function toggleSceneSetting(key, val) {
+  state['scene' + key.charAt(0).toUpperCase() + key.slice(1)] = val;
+  logConsole('[INFO] ' + key + ': ' + (val ? 'ON' : 'OFF'), 'dim');
+}
+
+// === PROPERTIES ===
+function toggleProp(key, val) {
+  logConsole('[INFO] ' + key + ': ' + (val ? 'ON' : 'OFF'), 'dim');
+}
+
+// === CONSOLE ===
+function logConsole(msg, color) {
+  const body = document.getElementById('console-body');
+  const line = document.createElement('div');
+  line.className = 'console-line';
+  const colors = {green:'var(--green)',orange:'var(--orange)',accent:'var(--accent)',red:'var(--red)',dim:'var(--dim)'};
+  line.style.color = colors[color] || 'var(--text)';
+  line.textContent = msg;
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+  // Keep max 50 lines
+  while (body.children.length > 50) body.removeChild(body.firstChild);
+}
+
+function runConsoleCommand(cmd) {
+  if (!cmd.trim()) return;
+  logConsole('$ ' + cmd, 'green');
+  cmd = cmd.trim().toLowerCase();
+  if (cmd === 'help') {
+    logConsole('Commands: help, clear, fps, color, dark, light, widgets, about', 'dim');
+  } else if (cmd === 'clear') {
+    document.getElementById('console-body').innerHTML = '';
+    logConsole('[INFO] Console cleared', 'dim');
+  } else if (cmd === 'fps') {
+    logConsole('[INFO] Current FPS: ' + fps.toFixed(1), 'accent');
+  } else if (cmd.startsWith('color')) {
+    randomizeColors();
+  } else if (cmd === 'dark') {
+    setDarkMode(true);
+  } else if (cmd === 'light') {
+    setDarkMode(false);
+  } else if (cmd === 'widgets') {
+    logConsole('[INFO] Widgets: ' + state.widgets.length + ' custom + 3 canvas widgets', 'dim');
+  } else if (cmd === 'about') {
+    showAbout();
+  } else {
+    logConsole('[ERR] Unknown command: ' + cmd + ' (type "help")', 'red');
+  }
+  document.getElementById('console-input-field').value = '';
+}
+
+// === STATUS ===
+function setStatus(msg) {
+  document.getElementById('sb-status').textContent = msg;
+  setTimeout(() => { document.getElementById('sb-status').textContent = 'Ready'; }, 2000);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'n') { e.preventDefault(); newProject(); }
+  if (e.ctrlKey && e.key === 'e') { e.preventDefault(); exportLayout(); }
+  if (e.key === 'Escape') { document.querySelectorAll('.mb-item.open').forEach(m => m.classList.remove('open')); }
+});
 
 requestAnimationFrame(loop);
 </script>

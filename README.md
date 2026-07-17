@@ -38,9 +38,23 @@ Five ready-made layouts via the **Samples** menu: Audio Mixer, Settings Panel, M
 ### Perform Mode & Web MIDI
 
 - **Perform Mode** (`P` key or ▶ Perform): all placed widgets become live controls — draggable sliders, toggleable buttons, rotatable jog wheels, animated VU meters
-- **Web MIDI** (Chrome/Edge/Opera): connect any MIDI controller, **MIDI Learn** (`L` key) to map hardware CC/notes to on-screen widgets, MIDI OUT feedback for LED rings and motor faders
-- **Numark Mixstream Pro preset** included as a starter mapping
-- Works fully without audio output — visual control surface demo
+- **Web MIDI** (Chrome/Edge/Opera): connect any MIDI controller, **MIDI Learn** (`L` key) to map hardware CC/notes/pitch-bend to on-screen widgets, MIDI OUT feedback for LED rings and motor faders
+- **Probe MIDI**: hardware diagnostics with input/output enumeration + live message monitor
+- **Numark Mixstream Pro preset** included as a starter mapping (requires Computer/MIDI mode on the unit)
+
+### Built-in Audio Engine (DJ-S11)
+
+The DJ-S11 sample includes a **fully functional audio engine** via Web Audio API:
+
+- **2 royalty-free procedural tracks**, synthesized in-browser (no samples, no licensing, works offline): House 128 BPM on Deck A, Breakbeat 140 BPM on Deck B
+- **PLAY / CUE / SYNC** — working sequencer per deck with beatmatching
+- **3-band EQ** (HI/MID/LOW) per channel via BiquadFilters
+- **Channel faders + equal-power crossfader**
+- **Pitch control** ±8% per deck
+- **Master volume + real RMS VU meters** (AnalyserNode)
+- **Jog wheels** nudge playback phase
+- **FX**: ECHO on master (delay + feedback)
+- Live playhead progress bars and time counters on each deck
 
 ## Upstream Contributions
 

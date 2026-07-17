@@ -156,6 +156,14 @@ Other Changes:
   - Metal4:
     - Added new Metal 4 backend (forked from Metal 3 backend). (#9458, #9451) [@AmelieHeinrich]
     - Added Metal-cpp support enabled with `IMGUI_IMPL_METAL_CPP` define. (#9461) [@MERL10N]
+  - Allegro5:
+    - Fixed texture destruction not deferring until UnusedFrames > 0, inconsistent with
+      all other backends. Prevents potential use-after-free in multi-threaded rendering
+      pipelines. (#8597, #9481) [@Turtle-PB]
+  - DirectX9:
+    - Fixed texture destruction not deferring until UnusedFrames > 0, inconsistent with
+      all other backends. Prevents potential use-after-free in multi-threaded rendering
+      pipelines. (#8597, #9481) [@Turtle-PB]
   - OpenGL2:
     - Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT when updating texture
       to avoid altering caller GL state. (#8802, #9473) [@Turtle-PB]
@@ -169,9 +177,16 @@ Other Changes:
   - SDL2:
     - Restore SDL_StartTextInput()/SDL_StopTextInput() in IME handler for on-screen keyboard
       support on Android. (#7636, #9474) [@Turtle-PB]
+  - SDLRenderer2:
+    - Fixed texture destruction not deferring until UnusedFrames > 0, inconsistent with
+      all other backends. Prevents potential use-after-free in multi-threaded rendering
+      pipelines. (#8597, #9481) [@Turtle-PB]
   - SDLRenderer3:
     - Fixed sampler change which didn't work on all graphics backends. (#7616, #9470, #9378)
     - Fixed default sampler not being Linear. Regression in 1.92.8. (#7616, #9470, #9378) [@ShiroKSH]
+    - Fixed texture destruction not deferring until UnusedFrames > 0, inconsistent with
+      all other backends. Prevents potential use-after-free in multi-threaded rendering
+      pipelines. (#8597, #9481) [@Turtle-PB]
   - Win32:
     - Uses `SetProcessDpiAwarenessContext()` instead of `SetThreadDpiAwarenessContext()`
       when available, fixing OpenGL DPI scaling issues as e.g. NVIDIA drivers tends

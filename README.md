@@ -31,6 +31,17 @@ A **drag-and-drop GUI designer** for Dear ImGui, inspired by Visual Basic and De
 - **Export** — generate ImGui C++ code or JSON layout to clipboard
 - **Console** — command interface with `help`, `clear`, `count`, `list`, `delete`, `export`
 
+### Sample Layouts
+
+Five ready-made layouts via the **Samples** menu: Audio Mixer, Settings Panel, Media Player, Color Picker, Debug Console — plus a full **Pioneer DJ-S11 Mixer** (2 decks, 3-band EQ, crossfader, jog wheels, FX).
+
+### Perform Mode & Web MIDI
+
+- **Perform Mode** (`P` key or ▶ Perform): all placed widgets become live controls — draggable sliders, toggleable buttons, rotatable jog wheels, animated VU meters
+- **Web MIDI** (Chrome/Edge/Opera): connect any MIDI controller, **MIDI Learn** (`L` key) to map hardware CC/notes to on-screen widgets, MIDI OUT feedback for LED rings and motor faders
+- **Numark Mixstream Pro preset** included as a starter mapping
+- Works fully without audio output — visual control surface demo
+
 ## Upstream Contributions
 
 This fork tracks upstream and contributes back via PRs:

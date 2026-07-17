@@ -1240,7 +1240,9 @@ function midiSupported() {
 
 async function midiConnect() {
   if (!midiSupported()) {
-    log('❌ Web MIDI not supported in this browser (use Chrome/Edge/Opera)');
+    log('❌ Web MIDI not supported in this browser (use Chrome/Edge/Opera desktop)');
+    updateMidiStatus(false, 0);
+    menuAction('Connect MIDI');
     return;
   }
   try {

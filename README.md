@@ -28,7 +28,7 @@ This fork tracks upstream and contributes back via PRs:
 | [#9467](https://github.com/ocornut/imgui/pull/9467) | [#8878](https://github.com/ocornut/imgui/issues/8878) | Android CI: Pin Gradle 9.4.1 via setup-gradle action | **MERGED** ✅ |
 | [#9473](https://github.com/ocornut/imgui/pull/9473) | [#8802](https://github.com/ocornut/imgui/issues/8802) | OpenGL2/3: Backup and restore GL_UNPACK state in UpdateTexture() | **MERGED** ✅ |
 | [#9474](https://github.com/ocornut/imgui/pull/9474) | [#6627](https://github.com/ocornut/imgui/issues/6627) | Android: Clear mouse pos on touch release + SDL2: Restore StartTextInput | **MERGED** ✅ |
-| [#9475](https://github.com/ocornut/imgui/pull/9475) | [#8597](https://github.com/ocornut/imgui/issues/8597) | OpenGL2/DX9/Allegro5/SDLRenderer2/SDLRenderer3: Defer texture destruction until UnusedFrames > 0 | Open |
+| [#9481](https://github.com/ocornut/imgui/pull/9481) | [#8597](https://github.com/ocornut/imgui/issues/8597) | DX9/Allegro5/SDLRenderer2/SDLRenderer3: Defer texture destruction until UnusedFrames > 0 | Open |
 | [#9468](https://github.com/ocornut/imgui/pull/9468) | [#9390](https://github.com/ocornut/imgui/issues/9390) | Vulkan: Fixed use-after-free in multi-viewport dynamic rendering | Closed |
 | [#9469](https://github.com/ocornut/imgui/pull/9469) | [#3446](https://github.com/ocornut/imgui/issues/3446) | Android: Move JNI keyboard/clipboard into backend, add display metrics | Open (under review) |
 
@@ -41,7 +41,7 @@ This fork tracks upstream and contributes back via PRs:
 - **SDL2 soft keyboard** — Restored `SDL_StartTextInput()`/`SDL_StopTextInput()` under `#ifdef __ANDROID__` for on-screen keyboard (#7636)
 
 **Open PRs (2):**
-- **Texture destroy deferral** — Defer destruction until `UnusedFrames > 0` in DX9, Allegro5, SDLRenderer2, SDLRenderer3, matching all other backends. Addresses multi-threaded rendering safety concerns raised in #8597. (#9475, companion to already-merged OpenGL2 fix)
+- **Texture destroy deferral** — Defer destruction until `UnusedFrames > 0` in DX9, Allegro5, SDLRenderer2, SDLRenderer3, matching all other backends. Addresses multi-threaded rendering safety concerns raised in #8597. (#9481)
 - **Android backend cleanup** — Move JNI keyboard/clipboard into backend, add display metrics, breaking change to Init() signature (#9469, under review by Omar)
 
 ## Go Bindings

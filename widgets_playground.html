@@ -414,10 +414,11 @@ canvasWrap.addEventListener('drop', e => {
   addWidget(type, x, y);
 });
 
-// Click-to-add fallback
+// Click-to-add fallback — stagger position to avoid overlap
 function addWidgetAt(type) {
   const rect = canvasWrap.getBoundingClientRect();
-  addWidget(type, rect.width/2 - 50, rect.height/2 - 15);
+  const offset = (widgets.length * 30) % 200;
+  addWidget(type, rect.width/2 - 50 + offset, rect.height/2 - 15 + offset);
 }
 
 // === WIDGET MANAGEMENT ===

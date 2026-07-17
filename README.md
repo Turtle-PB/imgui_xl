@@ -1,6 +1,6 @@
 # imgui_xl
 
-**Dear ImGui XL** — An enhanced community fork of [Dear ImGui](https://github.com/ocornut/imgui), focused on backend improvements, CI/CD fixes, sensors, and extended examples.
+**Dear ImGui XL** — An enhanced community fork of [Dear ImGui](https://github.com/ocornut/imgui), focused on backend improvements, CI/CD fixes, and extended tooling.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Upstream](https://img.shields.io/badge/upstream-ocornut%2Fimgui-blue)](https://github.com/ocornut/imgui)
@@ -16,8 +16,20 @@
 | **Live ImGui (WASM)** | Actual Dear ImGui compiled to WebAssembly via Emscripten | [wasm/index.html](https://turtle-pb.github.io/imgui_xl/wasm/index.html) |
 | **Showcase** | Landing page with all demos + PR list | [turtle-pb.github.io/imgui_xl](https://turtle-pb.github.io/imgui_xl/) |
 | **Echonation Visual** | 5-mode audio-reactive canvas demo | [echonation.html](https://turtle-pb.github.io/imgui_xl/echonation.html) |
-| **Widget Playground** | IDE-style demo with hierarchy, properties, console | [widgets_playground.html](https://turtle-pb.github.io/imgui_xl/widgets_playground.html) |
+| **Widget Playground** | Visual GUI Builder — drag & drop widget designer (Visual Basic/Delphi style) | [widgets_playground.html](https://turtle-pb.github.io/imgui_xl/widgets_playground.html) |
 | **Pixel OS Model** | Interactive Pixel 8 Pro phone simulator with working browser | [pixel_os_demo.html](https://turtle-pb.github.io/imgui_xl/pixel_os_demo.html) |
+
+## Widget Playground (Visual GUI Builder)
+
+A **drag-and-drop GUI designer** for Dear ImGui, inspired by Visual Basic and Delphi form builders:
+
+- **Toolbox** with 12 widget types: Button, Text, InputText, Checkbox, RadioButton, Slider, ProgressBar, ColorEdit, Combo, Separator, Group, SameLine
+- **Drag & drop** widgets from toolbox to canvas
+- **Move & resize** widgets directly on canvas
+- **Properties panel** — edit position, size, text, color, visibility, enabled state
+- **Widget list** — hierarchical view of all placed widgets
+- **Export** — generate ImGui C++ code or JSON layout to clipboard
+- **Console** — command interface with `help`, `clear`, `count`, `list`, `delete`, `export`
 
 ## Upstream Contributions
 

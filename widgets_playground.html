@@ -1232,11 +1232,16 @@ document.addEventListener('mousemove', e => {
     st.value = Math.max(0, Math.min(1, v));
     drawWidgetOverlay(w);
   } else if (w.type === 'Group' && w.text === '' && w.w === 140 && w.h === 140) {
-    // Jog wheel rotate
+    // Jog wheel rotate — smooth angular tracking with dead-zone
     const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
     const a1 = Math.atan2(performJogLast.y - cy, performJogLast.x - cx);
     const a2 = Math.atan2(e.clientY - cy, e.clientX - cx);
-    const delta = a2 - a1;
+    let delta = a2 - a1;
+    // Wrap around -π..π
+    if (delta > Math.PI) delta -= Math.PI * 2;
+    if (delta < -Math.PI) delta += Math.PI * 2;
+    // Dead zone to prevent jitter
+    if (Math.abs(delta) < 0.01) return;
     st.jogAngle += delta;
     performJogLast = { x: e.clientX, y: e.clientY };
     drawWidgetOverlay(w);
@@ -1408,10 +1413,17 @@ function midiApplyToWidget(id, value, source) {
     drawWidgetOverlay(w);
     djApplySlider(w, st);
   } else if (w.type === 'Group' && w.text === '' && w.w === 140 && w.h === 140) {
-    // Jog wheel via relative CC or pitch bend center-delta
-    st.jogAngle += (value - 0.5) * 0.5;
+    // Jog wheel — handle relative encoder values (63/65 = dec/inc, or 1/127, or signed)
+    let delta = 0;
+    if (value < 0.02) delta = -1;        // 0-1 range: value=0 means strong CCW
+    else if (value > 0.98) delta = 1;    // value=1 means strong CW
+    else if (value < 0.5) delta = -1;    // 0-63 = CCW (63=1 tick CCW)
+    else if (value > 0.5) delta = 1;     // 65-127 = CW (65=1 tick CW)
+    // Scale by how far from center (64) — faster spin = bigger nudge
+    const intensity = Math.abs(value - 0.5) * 2; // 0..1
+    st.jogAngle += delta * (0.05 + intensity * 0.15);
     drawWidgetOverlay(w);
-    djApplyJog(w, (value - 0.5));
+    djApplyJog(w, delta * (0.5 + intensity));
   }
 }
 

@@ -213,6 +213,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
       <div class="mb-dropdown">
         <div class="mb-dd-item" onclick="midiConnect()"><span>🔌</span> Connect MIDI Device</div>
         <div class="mb-dd-item" onclick="midiRescan()"><span>🔄</span> Rescan Devices</div>
+        <div class="mb-dd-item" onclick="midiProbe()"><span>🔬</span> Probe MIDI (diagnostics)</div>
         <div class="mb-dd-sep"></div>
         <div class="mb-dd-item" onclick="midiLearnToggle()"><span>🎯</span> <span id="midi-learn-label">MIDI Learn: OFF</span><span class="mb-dd-shortcut">L</span></div>
         <div class="mb-dd-item" onclick="midiExportMappings()"><span>💾</span> Export Mappings (JSON)</div>
@@ -391,6 +392,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <span id="sb-selected">Selected: None</span>
     <span>|</span>
     <span id="sb-midi"><span class="midi-dot" id="sb-midi-dot"></span>MIDI: off</span>
+    <span>|</span>
+    <span id="sb-midi-last" style="color:var(--accent)"></span>
     <span style="flex:1"></span>
     <span style="color:var(--green)" id="sb-status">Ready</span>
   </div>
@@ -1151,6 +1154,7 @@ function performInteract(w, e, el) {
     el.classList.toggle('lit', st.on);
     el.style.filter = st.on ? 'brightness(1.5)' : '';
     log(`🎛️ ${w.text}: ${st.on ? 'ON' : 'OFF'}`);
+    djTriggerButton(w, el);
     midiSendFeedback(w, st.on ? 127 : 0);
   } else if (w.type === 'Checkbox' || w.type === 'RadioButton') {
     st.on = !st.on;
@@ -1164,13 +1168,15 @@ function performInteract(w, e, el) {
     else v = (e.clientX - rect.left) / rect.width;
     st.value = Math.max(0, Math.min(1, v));
     drawWidgetOverlay(w);
-    if (w.type === 'Slider') log(`🎛️ ${w.text}: ${(st.value * 100).toFixed(0)}%`);
+    djApplySlider(w, st);
+    if (w.type === 'Slider') log(`🎛️ ${w.text || 'Slider'}: ${(st.value * 100).toFixed(0)}%`);
   } else if (w.type === 'Combo') {
     const opts = ['ECHO', 'REVERB', 'FLANGER', 'FILTER', 'DELAY', 'PHASER'];
     const cur = opts.indexOf(w.text);
     w.text = opts[(cur + 1) % opts.length];
     const label = el.querySelector('.pw-label');
     if (label) label.textContent = w.text;
+    if (w.text !== 'ECHO' && fxEcho) djEnableEcho(false); // switching away disables echo
     log(`🎛️ FX select: ${w.text}`);
   }
 }
@@ -1186,6 +1192,18 @@ document.addEventListener('mousedown', e => {
   const id = parseInt(el.id.replace('pw-', ''));
   const w = widgets.find(w => w.id === id);
   if (!w) return;
+
+  // MIDI Learn takes priority in perform mode: clicking selects learn target
+  if (midiLearning) {
+    if (midiLearnTarget !== null) {
+      const prev = document.getElementById('pw-' + midiLearnTarget);
+      if (prev) prev.classList.remove('midi-learning');
+    }
+    midiLearnTarget = id;
+    el.classList.add('midi-learning');
+    log(`🎯 Learn target: ${w.type} "${w.text || ''}" — move a hardware control`);
+    return;
+  }
 
   if (w.type === 'Slider' || w.type === 'ProgressBar') {
     performDragId = id;
@@ -1218,9 +1236,11 @@ document.addEventListener('mousemove', e => {
     const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
     const a1 = Math.atan2(performJogLast.y - cy, performJogLast.x - cx);
     const a2 = Math.atan2(e.clientY - cy, e.clientX - cx);
-    st.jogAngle += a2 - a1;
+    const delta = a2 - a1;
+    st.jogAngle += delta;
     performJogLast = { x: e.clientX, y: e.clientY };
     drawWidgetOverlay(w);
+    djApplyJog(w, delta);
   }
 });
 
@@ -1231,7 +1251,7 @@ let midiAccess = null;
 let midiInputs = new Map();
 let midiLearning = false;
 let midiLearnTarget = null;
-let midiMappings = {}; // widgetId -> {type:'cc'|'note', channel, number}
+let midiMappings = {}; // widgetId -> {type:'cc'|'note'|'pb', channel, number}
 let midiLastMsg = null;
 
 function midiSupported() {
@@ -1259,6 +1279,44 @@ async function midiConnect() {
   menuAction('Connect MIDI');
 }
 
+// === MIDI PROBE — full hardware diagnostics ===
+function midiProbe() {
+  log('🔬 === MIDI PROBE ===');
+  log(`🔬 navigator.requestMIDIAccess: ${midiSupported() ? 'AVAILABLE' : 'NOT AVAILABLE'}`);
+  if (!midiSupported()) {
+    log('🔬 FIX: Use Chrome, Edge, or Opera. Firefox/Safari need flags/polyfill.');
+    menuAction('Probe MIDI');
+    return;
+  }
+  if (!midiAccess) {
+    log('🔬 Not connected — requesting access now...');
+    midiConnect().then(() => { setTimeout(midiProbeReport, 500); });
+  } else {
+    midiProbeReport();
+  }
+  menuAction('Probe MIDI');
+}
+
+function midiProbeReport() {
+  log(`🔬 Inputs: ${midiAccess.inputs.size} | Outputs: ${midiAccess.outputs.size}`);
+  if (midiAccess.inputs.size === 0) {
+    log('🔬 ⚠️ NO INPUTS. Checklist:');
+    log('🔬  1. Mixstream Pro must be in COMPUTER/MIDI mode (not standalone)');
+    log('🔬  2. On Mixstream: Settings → MIDI/Source → enable "MIDI Mode" or connect via USB-B to PC');
+    log('🔬  3. Check Windows Device Manager → Sound, video and game controllers');
+    log('🔬  4. Try a different USB cable/port (must be data cable, not charge-only)');
+    log('🔬  5. Close other MIDI apps (DAWs can grab exclusive access)');
+  }
+  for (const input of midiAccess.inputs.values()) {
+    log(`🔬 IN  "${input.name}" | mfr="${input.manufacturer}" | id=${input.id} | state=${input.state} | conn=${input.connection}`);
+  }
+  for (const output of midiAccess.outputs.values()) {
+    log(`🔬 OUT "${output.name}" | mfr="${output.manufacturer}" | id=${output.id} | state=${output.state}`);
+  }
+  log('🔬 Move any control — last message shows in status bar (blue) and console');
+  log('🔬 === END PROBE ===');
+}
+
 function midiScanInputs() {
   midiInputs.clear();
   let count = 0;
@@ -1268,7 +1326,7 @@ function midiScanInputs() {
     log(`🎹 Found input: ${input.name} (${input.manufacturer || 'unknown'})`);
     count++;
   }
-  if (count === 0) log('🎹 No MIDI inputs found — connect your controller');
+  if (count === 0) log('🎹 No MIDI inputs found — run "Probe MIDI" for diagnostics');
   updateMidiStatus(count > 0, count);
 }
 
@@ -1297,13 +1355,18 @@ function midiHandleMessage(msg, input) {
 
   midiLastMsg = { type, channel, d1, d2, device: input.name, time: Date.now() };
 
-  // MIDI Learn capture
+  // Always show live traffic in status bar
+  const typeName = {0x80:'NoteOff',0x90:'NoteOn',0xA0:'PolyAT',0xB0:'CC',0xC0:'ProgChg',0xD0:'ChanAT',0xE0:'PitchBend'}[type] || 'Sys';
+  const sb = document.getElementById('sb-midi-last');
+  if (sb) sb.textContent = `${typeName} ch${channel} [${d1},${d2}]`;
+
+  // MIDI Learn capture — CC, NoteOn, or PitchBend
   if (midiLearning && midiLearnTarget !== null) {
-    if (type === 0xB0 || type === 0x90) {
-      const mType = type === 0xB0 ? 'cc' : 'note';
-      midiMappings[midiLearnTarget] = { type: mType, channel, number: d1 };
+    if (type === 0xB0 || type === 0x90 || type === 0xE0) {
+      const mType = type === 0xB0 ? 'cc' : (type === 0x90 ? 'note' : 'pb');
+      midiMappings[midiLearnTarget] = { type: mType, channel, number: type === 0xE0 ? 0 : d1 };
       const w = widgets.find(w => w.id === midiLearnTarget);
-      log(`🎯 Learned: ${w ? w.text : '#'+midiLearnTarget} ← ${mType.toUpperCase()} ch${channel} #${d1} (${input.name})`);
+      log(`🎯 Learned: ${w ? (w.text || w.type) : '#'+midiLearnTarget} ← ${mType.toUpperCase()} ch${channel} ${type===0xE0?'':('#'+d1)} (${input.name})`);
       const el = document.getElementById('pw-' + midiLearnTarget);
       if (el) el.classList.remove('midi-learning');
       midiLearnTarget = null;
@@ -1313,11 +1376,15 @@ function midiHandleMessage(msg, input) {
 
   // Apply mappings
   for (const [wId, map] of Object.entries(midiMappings)) {
-    if (map.type === 'cc' && type === 0xB0 && map.channel === channel && map.number === d1) {
+    if (map.channel !== channel) continue;
+    if (map.type === 'cc' && type === 0xB0 && map.number === d1) {
       midiApplyToWidget(parseInt(wId), d2 / 127, `CC${d1}=${d2}`);
-    } else if (map.type === 'note' && (type === 0x90 || type === 0x80) && map.channel === channel && map.number === d1) {
+    } else if (map.type === 'note' && (type === 0x90 || type === 0x80) && map.number === d1) {
       const isDown = type === 0x90 && d2 > 0;
       midiApplyToWidget(parseInt(wId), isDown ? 1 : 0, `Note${d1} ${isDown?'ON':'OFF'}`);
+    } else if (map.type === 'pb' && type === 0xE0) {
+      const v14 = (d2 << 7) | d1; // 14-bit pitch bend 0..16383
+      midiApplyToWidget(parseInt(wId), v14 / 16383, `PitchBend=${v14}`);
     }
   }
 }
@@ -1334,14 +1401,17 @@ function midiApplyToWidget(id, value, source) {
       el.classList.toggle('lit', st.on);
       el.style.filter = st.on ? 'brightness(1.5)' : '';
       log(`🎹 ${w.text}: ${st.on ? 'ON' : 'OFF'} (${source})`);
+      if (st.on) djTriggerButton(w, el);
     }
   } else if (w.type === 'Slider' || w.type === 'ProgressBar') {
     st.value = value;
     drawWidgetOverlay(w);
+    djApplySlider(w, st);
   } else if (w.type === 'Group' && w.text === '' && w.w === 140 && w.h === 140) {
-    // Jog wheel via relative CC
+    // Jog wheel via relative CC or pitch bend center-delta
     st.jogAngle += (value - 0.5) * 0.5;
     drawWidgetOverlay(w);
+    djApplyJog(w, (value - 0.5));
   }
 }
 
@@ -1353,7 +1423,7 @@ function midiLearnToggle() {
     if (el) el.classList.remove('midi-learning');
     midiLearnTarget = null;
   }
-  log(midiLearning ? '🎯 MIDI Learn ON — click a widget, then move a control on your device' : '🎯 MIDI Learn OFF');
+  log(midiLearning ? '🎯 MIDI Learn ON — click a widget (design OR perform mode), then move a hardware control' : '🎯 MIDI Learn OFF');
   menuAction('MIDI Learn');
 }
 
@@ -1374,27 +1444,15 @@ function midiClearMappings() {
 
 // Numark Mixstream Pro preset — common CC assignments (user-adjustable via Learn)
 function midiLoadNumarkPreset() {
-  // First, map by widget text labels if DJ-S11 layout is loaded
-  const byText = {};
-  widgets.forEach(w => { byText[w.text + '|' + w.type] = w.id; });
-
-  const preset = [
-    // [widgetText, widgetType, midiType, channel, number]
-    ['', 'Slider', 'cc', 1, 7],     // master volume fallback
-    ['HI', 'Slider', 'cc', 1, 20],  // EQ high ch1
-    ['MID', 'Slider', 'cc', 1, 21], // EQ mid ch1
-    ['LOW', 'Slider', 'cc', 1, 22], // EQ low ch1
-  ];
   let mapped = 0;
   widgets.forEach(w => {
     if (w.type === 'Slider') {
-      // assign sequential CCs to sliders as a starter preset
       midiMappings[w.id] = { type: 'cc', channel: 1, number: 7 + mapped };
       mapped++;
     }
   });
   log(`🎛️ Numark Mixstream preset loaded: ${mapped} sliders mapped to CC ch1`);
-  log('🎯 Use MIDI Learn to fine-map specific controls to your hardware');
+  log('🎯 Use MIDI Learn (press L) to fine-map specific controls to your hardware');
   menuAction('Numark Preset');
 }
 
@@ -1405,24 +1463,321 @@ function midiSendFeedback(w, value) {
   if (!map) return;
   for (const output of midiAccess.outputs.values()) {
     if (map.type === 'cc') output.send([0xB0 | (map.channel - 1), map.number, value]);
-    else output.send([0x90 | (map.channel - 1), map.number, value]);
+    else if (map.type === 'note') output.send([0x90 | (map.channel - 1), map.number, value]);
   }
 }
 
-// VU meter animation loop (visual only, in perform mode)
+// === AUDIO ENGINE — 2 royalty-free procedural tracks ===
+// Generated in-browser via Web Audio API: zero licensing issues, works offline.
+let AC = null, djMaster, djComp, djAnalyserA, djAnalyserB;
+let djBuilt = false;
+
+const DECK = {
+  A: { gain:null, hi:null, mid:null, low:null, analyser:null, playing:false, bpm:128, step:0, nextTime:0, pos:0, dur:96, timer:null, pitch:1.0, seq:null, vu:0 },
+  B: { gain:null, hi:null, mid:null, low:null, analyser:null, playing:false, bpm:140, step:0, nextTime:0, pos:0, dur:96, timer:null, pitch:1.0, seq:null, vu:0 }
+};
+let crossfadeVal = 0.5, masterVol = 0.8;
+let fxEcho = null;
+
+function audioInit() {
+  if (AC) return true;
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    djMaster = AC.createGain(); djMaster.gain.value = masterVol;
+    djComp = AC.createDynamicsCompressor();
+    djAnalyserA = AC.createAnalyser(); djAnalyserA.fftSize = 256;
+    djAnalyserB = AC.createAnalyser(); djAnalyserB.fftSize = 256;
+
+    // Per-deck 3-band EQ: lowshelf / peaking / highshelf
+    for (const k of ['A','B']) {
+      const d = DECK[k];
+      d.gain = AC.createGain(); d.gain.gain.value = 0.9;
+      d.low = AC.createBiquadFilter(); d.low.type = 'lowshelf'; d.low.frequency.value = 250;
+      d.mid = AC.createBiquadFilter(); d.mid.type = 'peaking'; d.mid.frequency.value = 1200; d.mid.Q.value = 0.8;
+      d.hi = AC.createBiquadFilter(); d.hi.type = 'highshelf'; d.hi.frequency.value = 4000;
+      d.analyser = k === 'A' ? djAnalyserA : djAnalyserB;
+    }
+    // Deck A → EQ → analyser → left bus; Deck B → right bus
+    DECK.A.gain.connect(DECK.A.low); DECK.A.low.connect(DECK.A.mid); DECK.A.mid.connect(DECK.A.hi); DECK.A.hi.connect(DECK.A.analyser);
+    DECK.B.gain.connect(DECK.B.low); DECK.B.low.connect(DECK.B.mid); DECK.B.mid.connect(DECK.B.hi); DECK.B.hi.connect(DECK.B.analyser);
+    DECK.A.analyser.connect(djMaster);
+    DECK.B.analyser.connect(djMaster);
+    djMaster.connect(djComp); djComp.connect(AC.destination);
+
+    buildSequences();
+    djBuilt = true;
+    log('🔊 Audio engine ready (Web Audio API)');
+    return true;
+  } catch (err) {
+    log('❌ Audio init failed: ' + err.message);
+    return false;
+  }
+}
+
+// --- Procedural royalty-free sequences (generated, not sampled) ---
+function buildSequences() {
+  // Deck A: House 128 BPM — 4/4 kick, offbeat hats, bassline
+  DECK.A.seq = {
+    kick:  [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+    hat:   [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,1],
+    snare: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    bass:  [55,0,0,55, 0,0,55,0, 55,0,0,55, 0,0,65.4,0] // A1 root w/ movement
+  };
+  // Deck B: Breakbeat 140 BPM — syncopated kick, tighter hats
+  DECK.B.seq = {
+    kick:  [1,0,0,1, 0,0,1,0, 0,1,0,0, 1,0,0,0],
+    hat:   [1,0,1,1, 0,1,1,0, 1,1,0,1, 1,0,1,0],
+    snare: [0,0,0,0, 1,0,0,1, 0,0,1,0, 0,0,1,0],
+    bass:  [41.2,0,41.2,0, 0,41.2,0,0, 49,0,0,49, 0,0,41.2,0] // E1/D1
+  };
+}
+
+// --- Drum / synth voices ---
+function djKick(t, vel = 1) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.frequency.setValueAtTime(150, t);
+  o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+  g.gain.setValueAtTime(vel, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+  o.connect(g); o.start(t); o.stop(t + 0.3);
+  return g;
+}
+function djHat(t, vel = 0.5, open = false) {
+  const len = open ? 0.2 : 0.05;
+  const buf = AC.createBuffer(1, AC.sampleRate * len, AC.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2);
+  const src = AC.createBufferSource(); src.buffer = buf;
+  const f = AC.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 7500;
+  const g = AC.createGain(); g.gain.value = vel;
+  src.connect(f); f.connect(g); src.start(t);
+  return g;
+}
+function djSnare(t, vel = 0.7) {
+  const buf = AC.createBuffer(1, AC.sampleRate * 0.15, AC.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 1.5);
+  const src = AC.createBufferSource(); src.buffer = buf;
+  const f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 0.8;
+  const g = AC.createGain(); g.gain.value = vel;
+  src.connect(f); f.connect(g); src.start(t);
+  return g;
+}
+function djBass(t, freq, vel = 0.4) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = 'sawtooth'; o.frequency.value = freq;
+  const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 300;
+  g.gain.setValueAtTime(vel, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+  o.connect(f); f.connect(g); o.start(t); o.stop(t + 0.2);
+  return g;
+}
+
+// --- Sequencer per deck ---
+function djScheduleStep(k) {
+  const d = DECK[k];
+  const spb = 60 / (d.bpm * d.pitch) / 4; // 16th note duration
+  const t = d.nextTime;
+  const s = d.step % 16;
+  const out = d.gain;
+  if (d.seq.kick[s])  djKick(t, 1).connect(out);
+  if (d.seq.hat[s])   djHat(t, 0.4, s % 4 === 3).connect(out);
+  if (d.seq.snare[s]) djSnare(t, 0.7).connect(out);
+  if (d.seq.bass[s])  djBass(t, d.seq.bass[s], 0.35).connect(out);
+  d.step++;
+  d.pos += spb;
+  d.nextTime += spb;
+}
+
+function djDeckPlay(k) {
+  if (!audioInit()) return;
+  const d = DECK[k];
+  if (AC.state === 'suspended') AC.resume();
+  if (d.playing) return;
+  d.playing = true;
+  d.step = 0; d.pos = 0;
+  d.nextTime = AC.currentTime + 0.05;
+  d.timer = setInterval(() => {
+    while (d.nextTime < AC.currentTime + 0.15) djScheduleStep(k);
+  }, 40);
+  log(`▶ Deck ${k} playing (${d.bpm} BPM, ${k === 'A' ? 'House' : 'Breakbeat'} royalty-free loop)`);
+}
+
+function djDeckStop(k) {
+  const d = DECK[k];
+  if (!d.playing) return;
+  d.playing = false;
+  clearInterval(d.timer);
+  d.vu = 0;
+  log(`⏹ Deck ${k} stopped`);
+}
+
+function djDeckCue(k) {
+  const d = DECK[k];
+  d.step = 0; d.pos = 0;
+  if (AC) d.nextTime = AC.currentTime + 0.05;
+  log(`⏮ Deck ${k} cued to start`);
+}
+
+function djSync(fromKey) {
+  const other = fromKey === 'A' ? 'B' : 'A';
+  DECK[other].bpm = DECK[fromKey].bpm;
+  if (DECK[other].playing) {
+    DECK[other].step = DECK[fromKey].step;
+    DECK[other].nextTime = DECK[fromKey].nextTime;
+  }
+  log(`🔄 SYNC: Deck ${other} → ${DECK[fromKey].bpm} BPM, beat-matched to Deck ${fromKey}`);
+}
+
+// --- FX echo on master ---
+function djEnableEcho(on) {
+  if (!AC) return;
+  if (on && !fxEcho) {
+    fxEcho = AC.createDelay(1.0);
+    fxEcho.delayTime.value = 0.375;
+    const fb = AC.createGain(); fb.gain.value = 0.4;
+    const wet = AC.createGain(); wet.gain.value = 0.35;
+    djComp.disconnect();
+    djComp.connect(AC.destination);
+    djComp.connect(fxEcho); fxEcho.connect(fb); fb.connect(fxEcho);
+    fxEcho.connect(wet); wet.connect(AC.destination);
+    log('🎛️ ECHO enabled on master');
+  } else if (!on && fxEcho) {
+    try { djComp.disconnect(fxEcho); } catch(e) {}
+    fxEcho = null;
+    log('🎛️ ECHO disabled');
+  }
+}
+
+// --- Wire DJ-S11 widgets to audio ---
+function djTriggerButton(w, el) {
+  const t = w.text.trim().toUpperCase();
+  // Determine deck by x position (left half = A, right half = B)
+  const deck = w.x < 480 ? 'A' : 'B';
+  if (t === 'PLAY') {
+    const d = DECK[deck];
+    if (d.playing) djDeckStop(deck); else djDeckPlay(deck);
+    // keep lit state in sync
+    const st = widgetStates[w.id];
+    st.on = DECK[deck].playing;
+    el.classList.toggle('lit', st.on);
+    el.style.filter = st.on ? 'brightness(1.5)' : '';
+  } else if (t === 'CUE') {
+    djDeckCue(deck);
+    widgetStates[w.id].on = false;
+    el.classList.remove('lit'); el.style.filter = '';
+  } else if (t === 'SYNC') {
+    djSync(deck);
+    widgetStates[w.id].on = false;
+    el.classList.remove('lit'); el.style.filter = '';
+  } else if (t === 'ON') {
+    djEnableEcho(true);
+  } else if (t === '◄◄' || t === '►►') {
+    const d = DECK[deck];
+    d.bpm = Math.max(60, Math.min(200, d.bpm + (t === '►►' ? 1 : -1)));
+    log(`🎛️ Deck ${deck} BPM: ${d.bpm}`);
+    widgetStates[w.id].on = false;
+    el.classList.remove('lit'); el.style.filter = '';
+  }
+}
+
+function djApplySlider(w, st) {
+  if (!djBuilt) return;
+  const t = w.text.trim().toUpperCase();
+  const v = st.value;
+  // EQ: value 0..1 → gain -24dB..+6dB (0.5 = 0dB)
+  const eqGain = v < 0.5 ? (v * 2 - 1) * 24 : (v - 0.5) * 12;
+  // Determine channel: mixer center is x 290..490; left of that = A path, else B
+  const isA = w.x < 480;
+  const dA = DECK.A, dB = DECK.B;
+
+  if (t === 'HI')  { if (isA) dA.hi.gain.value  = eqGain; else dB.hi.gain.value  = eqGain; }
+  else if (t === 'MID') { if (isA) dA.mid.gain.value = eqGain; else dB.mid.gain.value = eqGain; }
+  else if (t === 'LOW') { if (isA) dA.low.gain.value = eqGain; else dB.low.gain.value = eqGain; }
+  else if (t === 'CH1') { dA.gain.gain.value = v; }
+  else if (t === 'CH2') { dB.gain.gain.value = v; }
+  else if (t === 'MASTER') { masterVol = v; djMaster.gain.value = v; }
+  else if (t === 'CROSSFADER') {
+    crossfadeVal = v;
+    // Equal-power crossfade
+    dA.gain.gain.value = Math.cos(v * Math.PI / 2) * (widgetStates[findChFaderId('CH1')]?.value ?? 0.9);
+    dB.gain.gain.value = Math.sin(v * Math.PI / 2) * (widgetStates[findChFaderId('CH2')]?.value ?? 0.9);
+  } else if (t === '' || t === 'PITCH') {
+    // Pitch sliders on decks: 0..1 → 0.92..1.08 (±8%)
+    const deck = w.x < 480 ? 'A' : 'B';
+    if (w.y > 390 && w.y < 440) {
+      DECK[deck].pitch = 0.92 + v * 0.16;
+      const pct = ((DECK[deck].pitch - 1) * 100).toFixed(1);
+      log(`🎛️ Deck ${deck} pitch: ${pct > 0 ? '+' : ''}${pct}%`);
+    }
+  }
+}
+
+function findChFaderId(label) {
+  const w = widgets.find(w => w.text === label && w.type === 'Slider');
+  return w ? w.id : null;
+}
+
+function djApplyJog(w, delta) {
+  // Jog nudge: temporarily speed up / slow down the deck
+  const deck = w.x < 480 ? 'A' : 'B';
+  const d = DECK[deck];
+  if (d.playing) {
+    d.nextTime -= delta * 0.02; // small phase nudge
+  }
+}
+
+// === PERFORM MODE ===
 let vuPhase = 0;
+const vuBufA = new Uint8Array(128), vuBufB = new Uint8Array(128);
+
 function animateVU() {
   if (performMode) {
     vuPhase += 0.05;
+    // Real VU data from analysers when audio is running
+    let vuA = 0, vuB = 0;
+    if (djBuilt && djAnalyserA) {
+      djAnalyserA.getByteTimeDomainData(vuBufA);
+      let sum = 0; for (let i = 0; i < vuBufA.length; i++) { const d = (vuBufA[i] - 128) / 128; sum += d * d; }
+      vuA = Math.min(1, Math.sqrt(sum / vuBufA.length) * 3);
+      djAnalyserB.getByteTimeDomainData(vuBufB);
+      sum = 0; for (let i = 0; i < vuBufB.length; i++) { const d = (vuBufB[i] - 128) / 128; sum += d * d; }
+      vuB = Math.min(1, Math.sqrt(sum / vuBufB.length) * 3);
+    }
     widgets.forEach(w => {
       if (w.type === 'ProgressBar') {
         const st = widgetStates[w.id];
         if (st && !midiMappings[w.id]) {
-          // Auto-animate VU-style bars that aren't MIDI-mapped
           const vert = w.h > w.w;
           if (vert) {
-            st.value = Math.max(0, Math.min(1, 0.6 + Math.sin(vuPhase + w.id) * 0.25 + (Math.random() - 0.5) * 0.1));
+            // Vertical VU (master meter) — driven by real audio RMS
+            st.value = Math.max(vuA, vuB);
             drawWidgetOverlay(w);
+          } else {
+            // Horizontal progress bars on decks — show playhead position
+            const deck = w.x < 480 ? 'A' : 'B';
+            const d = DECK[deck];
+            if (d.playing) {
+              st.value = (d.pos % 16) / 16; // loop playhead
+              drawWidgetOverlay(w);
+            }
+          }
+        }
+      }
+      // Update deck time displays
+      if (w.type === 'Text' && w.text.match(/^\d{2}:\d{2} \//)) {
+        const deck = w.x < 480 ? 'A' : 'B';
+        const d = DECK[deck];
+        if (d.playing) {
+          const secs = Math.floor(d.pos % 60);
+          const mins = Math.floor(d.pos / 60) % 60;
+          const total = deck === 'A' ? '03:24' : '04:12';
+          const newText = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')} / ${total}`;
+          if (w.text !== newText) {
+            w.text = newText;
+            const el = document.getElementById('pw-' + w.id);
+            const label = el && el.querySelector('.pw-label');
+            if (label) label.textContent = newText;
           }
         }
       }

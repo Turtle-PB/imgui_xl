@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ImGui Widget Playground — imgui_xl</title>
+<title>ImGui Widget Playground — Visual GUI Builder</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -20,9 +20,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 ::-webkit-scrollbar-thumb:hover{background:#3a3d4a}
 
-#app{display:grid;grid-template-columns:260px 1fr 300px;grid-template-rows:36px 1fr 24px;height:100vh}
+#app{display:grid;grid-template-columns:200px 1fr 280px;grid-template-rows:36px 1fr 24px;height:100vh}
 
-/* Menubar with dropdowns */
+/* Menubar */
 .menubar{grid-column:1/-1;display:flex;align-items:center;gap:0;background:var(--panel);border-bottom:1px solid var(--border);padding:0 8px;z-index:100}
 .mb-item{position:relative;padding:0 12px;height:36px;display:flex;align-items:center;cursor:pointer;color:var(--dim);font-size:13px;user-select:none}
 .mb-item:hover{color:var(--bright);background:var(--panel2)}
@@ -36,11 +36,57 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 .mb-spacer{flex:1}
 .mb-right{font-family:var(--mono);font-size:11px;color:var(--dim);padding:0 12px}
 
-.left-panel{background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;padding:8px}
-.viewport{position:relative;overflow:hidden;background:var(--bg)}
-.right-panel{background:var(--panel);border-left:1px solid var(--border);overflow-y:auto;padding:8px}
-.statusbar{grid-column:1/-1;display:flex;align-items:center;background:var(--panel);border-top:1px solid var(--border);padding:0 12px;font-family:var(--mono);font-size:11px;color:var(--dim);gap:12px}
+/* Toolbox (left) — draggable widget palette */
+.toolbox{background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;padding:8px}
+.tb-title{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;padding:8px 0 4px}
+.tb-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.tb-item{padding:10px 6px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;cursor:grab;text-align:center;font-size:11px;color:var(--text);transition:all .15s;user-select:none;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tb-item:hover{border-color:var(--accent);background:rgba(74,158,255,.1)}
+.tb-item:active{cursor:grabbing}
+.tb-item .tb-icon{font-size:20px}
+.tb-item.dragging{opacity:.5;border-color:var(--accent)}
 
+/* Canvas (center) — drop target */
+.canvas-wrap{position:relative;overflow:hidden;background:var(--bg)}
+#design-canvas{position:absolute;inset:0}
+.drop-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;color:var(--dim);font-size:14px;font-family:var(--mono);opacity:0;transition:opacity .2s}
+.drop-hint.visible{opacity:1}
+.drop-hint .inner{border:2px dashed var(--accent);border-radius:8px;padding:20px 40px;background:rgba(74,158,255,.05)}
+
+/* Placed widgets on canvas */
+.pw{position:absolute;border:1px solid var(--border);border-radius:3px;background:var(--panel2);display:flex;align-items:center;justify-content:center;cursor:move;user-select:none;z-index:10;transition:box-shadow .15s}
+.pw:hover{box-shadow:0 0 0 1px var(--accent)}
+.pw.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent),0 2px 8px rgba(74,158,255,.3)}
+.pw-label{font-size:11px;color:var(--text);font-family:var(--sans);pointer-events:none}
+.pw-handle{position:absolute;width:8px;height:8px;background:var(--accent);border:1px solid #fff;border-radius:50%;z-index:20;cursor:se-resize;bottom:-4px;right:-4px;display:none}
+.pw.selected .pw-handle{display:block}
+
+/* Widget type-specific rendering */
+.pw-button{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+.pw-button .pw-label{color:#fff}
+.pw-slider{background:var(--input);border-color:var(--border);min-height:20px}
+.pw-slider .pw-label{font-size:9px}
+.pw-checkbox{background:transparent;border:none;min-width:80px;justify-content:flex-start;gap:6px;padding:2px}
+.pw-checkbox .pw-check{width:14px;height:14px;border:1px solid var(--border);border-radius:2px;display:inline-block;background:var(--input)}
+.pw-checkbox.checked .pw-check{background:var(--accent);border-color:var(--accent)}
+.pw-input{background:var(--input);border-color:var(--border);min-height:24px;justify-content:flex-start;padding:0 6px}
+.pw-input .pw-label{color:var(--dim);font-family:var(--mono);font-size:10px}
+.pw-color{background:var(--input);border-color:var(--border);min-width:60px;min-height:24px}
+.pw-color .pw-swatch{width:100%;height:100%;border-radius:2px}
+.pw-radio{background:transparent;border:none;min-width:80px;justify-content:flex-start;gap:6px;padding:2px}
+.pw-radio .pw-dot{width:12px;height:12px;border:1.5px solid var(--border);border-radius:50%;display:inline-block}
+.pw-radio.checked .pw-dot{border-color:var(--accent);background:var(--accent)}
+.pw-progress{background:var(--input);border-color:var(--border);min-height:12px;overflow:hidden}
+.pw-progress .pw-fill{height:100%;background:var(--accent);width:50%}
+.pw-combo{background:var(--input);border-color:var(--border);min-height:24px;justify-content:flex-start;padding:0 6px}
+.pw-combo .pw-label{color:var(--dim);font-size:10px}
+.pw-combo::after{content:'▼';margin-left:auto;font-size:8px;color:var(--dim)}
+.pw-text{background:transparent;border:none;min-width:60px;justify-content:flex-start;padding:2px}
+.pw-text .pw-label{font-size:12px}
+.pw-separator{background:transparent;border:none;border-top:1px solid var(--border);min-height:1px;min-width:100px}
+
+/* Right panel */
+.right-panel{background:var(--panel);border-left:1px solid var(--border);overflow-y:auto;padding:8px}
 .win{background:var(--panel2);border:1px solid var(--border);border-radius:4px;margin-bottom:8px;overflow:hidden}
 .win-header{padding:6px 10px;font-size:12px;font-weight:600;color:var(--bright);border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);display:flex;align-items:center;gap:6px}
 .win-body{padding:8px 10px;display:flex;flex-direction:column;gap:6px}
@@ -53,6 +99,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 .btn:active{background:var(--accent);color:#fff}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn.primary:hover{background:#3a8eef}
+.btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn.danger:hover{background:#c9302c}
 
 .chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;user-select:none}
 .chk-box{width:16px;height:16px;border:1px solid var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
@@ -62,34 +110,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 
 .slider{flex:1;height:24px;display:flex;align-items:center;cursor:pointer;position:relative}
 .slider-track{width:100%;height:4px;background:var(--input);border-radius:2px;position:relative}
-.slider-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .05s}
-.slider-knob{position:absolute;top:50%;width:12px;height:20px;background:var(--panel);border:1px solid var(--accent);border-radius:2px;transform:translate(-50%,-50%);box-shadow:0 0 4px rgba(74,158,255,.15);transition:left .05s}
+.slider-fill{height:100%;background:var(--accent);border-radius:2px}
+.slider-knob{position:absolute;top:50%;width:12px;height:20px;background:var(--panel);border:1px solid var(--accent);border-radius:2px;transform:translate(-50%,-50%)}
 .slider-value{font-family:var(--mono);font-size:11px;color:var(--dim);min-width:36px;text-align:right}
 
-.rdio{display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;user-select:none}
-.rdio-dot{width:14px;height:14px;border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.rdio.on .rdio-dot{border-color:var(--accent)}
-.rdio.on .rdio-dot::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent)}
-
 .color-prev{width:28px;height:18px;border-radius:2px;border:1px solid var(--border);display:inline-block;cursor:pointer;flex-shrink:0}
-.tab{padding:4px 12px;font-size:12px;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;user-select:none}
-.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
-.tab:hover:not(.on){color:var(--text)}
-
-.canvas-area{position:absolute;inset:0}
-canvas{display:block}
-.overlay-text{position:absolute;font-family:var(--mono);font-size:11px;color:var(--dim);pointer-events:none;text-shadow:0 0 4px var(--bg)}
-
-.tree-node{cursor:pointer;font-size:12px;padding:3px 0;color:var(--dim);user-select:none;display:flex;align-items:center;gap:4px}
-.tree-node:hover{color:var(--text)}
-.tree-node.sel{color:var(--accent)}
-.tree-children{padding-left:16px;display:none}
-.tree-children.open{display:block}
-.tree-toggle{width:12px;text-align:center;font-size:10px;color:var(--dim)}
-.tree-toggle.open{transform:rotate(90deg)}
-
-.progress{width:100%;height:8px;background:var(--input);border-radius:4px;overflow:hidden}
-.progress-bar{height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
+.color-popup{position:absolute;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:8px;z-index:300;display:none;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.color-popup.open{display:block}
+.color-swatch{display:inline-block;width:20px;height:20px;border-radius:3px;cursor:pointer;margin:2px;border:1px solid rgba(255,255,255,.1)}
+.color-swatch:hover{transform:scale(1.15)}
 
 .input-field{background:var(--input);border:1px solid var(--border);border-radius:3px;padding:4px 8px;color:var(--bright);font-size:12px;font-family:var(--mono);outline:none;flex:1;min-width:0}
 .input-field:focus{border-color:var(--accent)}
@@ -99,21 +128,23 @@ canvas{display:block}
 .console-input{display:flex;gap:6px;align-items:center;padding-top:4px;border-top:1px solid var(--border);margin-top:4px}
 .console-prompt{color:var(--green);font-family:var(--mono);font-size:11px}
 
-.color-popup{position:absolute;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:8px;z-index:300;display:none;box-shadow:0 4px 12px rgba(0,0,0,.4)}
-.color-popup.open{display:block}
-.color-swatch{display:inline-block;width:20px;height:20px;border-radius:3px;cursor:pointer;margin:2px;border:1px solid rgba(255,255,255,.1)}
-.color-swatch:hover{transform:scale(1.15)}
+.tree-node{cursor:pointer;font-size:12px;padding:3px 0;color:var(--dim);user-select:none;display:flex;align-items:center;gap:4px}
+.tree-node:hover{color:var(--text)}
+.tree-node.sel{color:var(--accent)}
+
+.statusbar{grid-column:1/-1;display:flex;align-items:center;background:var(--panel);border-top:1px solid var(--border);padding:0 12px;font-family:var(--mono);font-size:11px;color:var(--dim);gap:12px}
 </style>
 </head>
 <body>
 <div id="app">
-  <!-- MENUBAR WITH WORKING DROPDOWNS -->
+  <!-- MENUBAR -->
   <div class="menubar">
     <div class="mb-item" id="mb-file" onclick="toggleMenu('mb-file')">
       File
       <div class="mb-dropdown">
-        <div class="mb-dd-item" onclick="newProject()"><span>📄</span> New<span class="mb-dd-shortcut">Ctrl+N</span></div>
+        <div class="mb-dd-item" onclick="newProject()"><span>📄</span> New Project<span class="mb-dd-shortcut">Ctrl+N</span></div>
         <div class="mb-dd-item" onclick="exportLayout()"><span>💾</span> Export Layout<span class="mb-dd-shortcut">Ctrl+E</span></div>
+        <div class="mb-dd-item" onclick="exportImGuiCode()"><span>📝</span> Export ImGui Code</div>
         <div class="mb-dd-sep"></div>
         <div class="mb-dd-item" onclick="menuAction('Quit')"><span>🚪</span> Quit</div>
       </div>
@@ -126,14 +157,14 @@ canvas{display:block}
         <div class="mb-dd-sep"></div>
         <div class="mb-dd-item" onclick="menuAction('Copy')"><span>📋</span> Copy<span class="mb-dd-shortcut">Ctrl+C</span></div>
         <div class="mb-dd-item" onclick="menuAction('Paste')"><span>📌</span> Paste<span class="mb-dd-shortcut">Ctrl+V</span></div>
-        <div class="mb-dd-item" onclick="menuAction('Delete')"><span>🗑️</span> Delete<span class="mb-dd-shortcut">Del</span></div>
+        <div class="mb-dd-item" onclick="deleteSelected()"><span>🗑️</span> Delete<span class="mb-dd-shortcut">Del</span></div>
       </div>
     </div>
     <div class="mb-item" id="mb-view" onclick="toggleMenu('mb-view')">
       View
       <div class="mb-dropdown">
-        <div class="mb-dd-item" onclick="togglePanel('leftPanel')"><span> ◀</span> Toggle Left Panel</div>
-        <div class="mb-dd-item" onclick="togglePanel('rightPanel')"><span>▶ </span> Toggle Right Panel</div>
+        <div class="mb-dd-item" onclick="toggleGrid()"><span>⊞</span> Toggle Grid</div>
+        <div class="mb-dd-item" onclick="snapToGrid = !snapToGrid; menuAction('Snap: ' + (snapToGrid?'ON':'OFF'))"><span>🧲</span> Snap to Grid</div>
         <div class="mb-dd-sep"></div>
         <div class="mb-dd-item" onclick="setDarkMode(true)"><span>🌙</span> Dark Mode</div>
         <div class="mb-dd-item" onclick="setDarkMode(false)"><span>☀️</span> Light Mode</div>
@@ -142,21 +173,14 @@ canvas{display:block}
     <div class="mb-item" id="mb-widgets" onclick="toggleMenu('mb-widgets')">
       Widgets
       <div class="mb-dropdown">
-        <div class="mb-dd-item" onclick="addWidget('Button')"><span>🔘</span> Add Button</div>
-        <div class="mb-dd-item" onclick="addWidget('Slider')"><span>🎚️</span> Add Slider</div>
-        <div class="mb-dd-item" onclick="addWidget('Checkbox')"><span>☑️</span> Add Checkbox</div>
-        <div class="mb-dd-item" onclick="addWidget('ColorEdit')"><span>🎨</span> Add ColorEdit</div>
-        <div class="mb-dd-item" onclick="addWidget('InputText')"><span>⌨️</span> Add InputText</div>
-        <div class="mb-dd-sep"></div>
         <div class="mb-dd-item" onclick="clearWidgets()"><span>🧹</span> Clear All Widgets</div>
+        <div class="mb-dd-item" onclick="selectAll()"><span>☑️</span> Select All</div>
+        <div class="mb-dd-item" onclick="deselectAll()"><span>☐</span> Deselect All</div>
       </div>
     </div>
     <div class="mb-item" id="mb-tools" onclick="toggleMenu('mb-tools')">
       Tools
       <div class="mb-dropdown">
-        <div class="mb-dd-item" onclick="randomizeColors()"><span>🎲</span> Randomize Colors</div>
-        <div class="mb-dd-item" onclick="pulseCanvas()"><span>💥</span> Pulse Effect</div>
-        <div class="mb-dd-sep"></div>
         <div class="mb-dd-item" onclick="window.open('https://github.com/Turtle-PB/imgui_xl','_blank')"><span>📂</span> GitHub Repo</div>
         <div class="mb-dd-item" onclick="window.open('https://turtle-pb.github.io/imgui_xl/wasm/index.html','_blank')"><span>⚡</span> Live ImGui (WASM)</div>
       </div>
@@ -167,73 +191,92 @@ canvas{display:block}
       <div class="mb-dropdown">
         <div class="mb-dd-item" onclick="showAbout()"><span>ℹ️</span> About</div>
         <div class="mb-dd-item" onclick="menuAction('Documentation')"><span>📚</span> Documentation</div>
-        <div class="mb-dd-item" onclick="menuAction('Report Bug')"><span>🐛</span> Report Bug</div>
       </div>
     </div>
     <div class="mb-spacer"></div>
-    <div class="mb-right" id="fps-display">60.0 FPS</div>
+    <div class="mb-right" id="widget-count">0 widgets</div>
     <div class="mb-sep"></div>
-    <div class="mb-right" id="frame-display">0 frames</div>
+    <div class="mb-right" id="fps-display">60 FPS</div>
   </div>
 
-  <!-- LEFT PANEL: HIERARCHY + SCENE -->
-  <div class="left-panel" id="leftPanel">
-    <div class="win">
-      <div class="win-header">📋 Hierarchy</div>
-      <div class="win-body">
-        <div class="tree-node" onclick="selectNode(this,'Viewport')"><span class="tree-toggle open" onclick="toggleTree(this);event.stopPropagation()">▶</span> Viewport</div>
-        <div class="tree-children open" id="tree-main">
-          <div class="tree-node sel" onclick="selectNode(this,'MainWindow')"><span class="tree-toggle" onclick="toggleTree(this);event.stopPropagation()">▶</span> Main Window</div>
-          <div class="tree-children" id="tree-mainwin">
-            <div class="tree-node" onclick="selectNode(this,'Slider')"><span>🎚️</span> Slider</div>
-            <div class="tree-node" onclick="selectNode(this,'ButtonGroup')"><span>🔘</span> Button Group</div>
-            <div class="tree-node" onclick="selectNode(this,'ColorPicker')"><span>🎨</span> Color Picker</div>
-            <div class="tree-node" onclick="selectNode(this,'TextInput')"><span>⌨️</span> Text Input</div>
-          </div>
-          <div class="tree-node" onclick="selectNode(this,'MetricsPanel')"><span>📊</span> Metrics Panel</div>
-          <div class="tree-node" onclick="selectNode(this,'CanvasRenderer')"><span>🖼️</span> Canvas Renderer</div>
-        </div>
+  <!-- TOOLBOX (left) -->
+  <div class="toolbox">
+    <div class="tb-title">Basic Widgets</div>
+    <div class="tb-grid">
+      <div class="tb-item" draggable="true" data-widget="Button" ondragstart="startDrag(event,this)" onclick="addWidgetAt('Button')">
+        <span class="tb-icon">🔘</span><span>Button</span>
+      </div>
+      <div class="tb-item" draggable="true" data-widget="Text" ondragstart="startDrag(event,this)" onclick="addWidgetAt('Text')">
+        <span class="tb-icon">📝</span><span>Text</span>
+      </div>
+      <div class="tb-item" draggable="true" data-widget="InputText" ondragstart="startDrag(event,this)" onclick="addWidgetAt('InputText')">
+        <span class="tb-icon">⌨️</span><span>Input</span>
+      </div>
+      <div class="tb-item" draggable="true" data-widget="Checkbox" ondragstart="startDrag(event,this)" onclick="addWidgetAt('Checkbox')">
+        <span class="tb-icon">☑️</span><span>Checkbox</span>
+      </div>
+      <div class="tb-item" draggable="true" data-widget="RadioButton" ondragstart="startDrag(event,this)" onclick="addWidgetAt('RadioButton')">
+        <span class="tb-icon">🔘</span><span>Radio</span>
+      </div>
+      <div class="tb-item" draggable="true" data-widget="Slider" ondragstart="startDrag(event,this)" onclick="addWidgetAt('Slider')">
+        <span class="tb-icon">🎚️</span><span>Slider</span>
+      </div>
+      <div class="tb-item" draggable="true" data-widget="ProgressBar" ondragstart="startDrag(event,this)" onclick="addWidgetAt('ProgressBar')">
+        <span class="tb-icon">📊</span><span>Progress</span>
+      </div>
+      <div class="tb-item" draggable="true" data-widget="ColorEdit" ondragstart="startDrag(event,this)" onclick="addWidgetAt('ColorEdit')">
+        <span class="tb-icon">🎨</span><span>Color</span>
+      </div>
+      <div class="tb-item" draggable="true" data-widget="Combo" ondragstart="startDrag(event,this)" onclick="addWidgetAt('Combo')">
+        <span class="tb-icon">📋</span><span>Combo</span>
+      </div>
+      <div class="tb-item" draggable="true" data-widget="Separator" ondragstart="startDrag(event,this)" onclick="addWidgetAt('Separator')">
+        <span class="tb-icon">➖</span><span>Separator</span>
       </div>
     </div>
-    <div class="win">
-      <div class="win-header">⚙️ Scene Settings</div>
-      <div class="win-body">
-        <div class="chk on" onclick="this.classList.toggle('on');toggleSceneSetting('grid',this.classList.contains('on'))"><span class="chk-box"></span> Show Grid</div>
-        <div class="chk on" onclick="this.classList.toggle('on');toggleSceneSetting('fps',this.classList.contains('on'))"><span class="chk-box"></span> Show FPS</div>
-        <div class="chk" onclick="this.classList.toggle('on');toggleSceneSetting('vsync',this.classList.contains('on'))"><span class="chk-box"></span> VSync</div>
-        <div class="chk on" onclick="this.classList.toggle('on');toggleSceneSetting('aa',this.classList.contains('on'))"><span class="chk-box"></span> Anti-Aliasing</div>
+    <div class="tb-title">Layout</div>
+    <div class="tb-grid">
+      <div class="tb-item" draggable="true" data-widget="Group" ondragstart="startDrag(event,this)" onclick="addWidgetAt('Group')">
+        <span class="tb-icon">📦</span><span>Group</span>
       </div>
-    </div>
-    <div class="win">
-      <div class="win-header">📝 Notes</div>
-      <div class="win-body">
-        <textarea class="input-field" rows="3" placeholder="Write notes..." style="resize:vertical;min-height:40px;-webkit-user-select:text;user-select:text"></textarea>
+      <div class="tb-item" draggable="true" data-widget="SameLine" ondragstart="startDrag(event,this)" onclick="addWidgetAt('SameLine')">
+        <span class="tb-icon">↔️</span><span>SameLine</span>
       </div>
     </div>
   </div>
 
-  <!-- VIEWPORT: CANVAS -->
-  <div class="viewport" id="viewport">
-    <div class="canvas-area"><canvas id="canvas"></canvas></div>
-    <div class="overlay-text" style="top:8px;left:8px">## Viewport — Widget Playground</div>
-    <div class="overlay-text" style="bottom:8px;left:8px" id="canvas-stats">Render: 0 draw calls</div>
+  <!-- CANVAS (center) -->
+  <div class="canvas-wrap" id="canvas-wrap">
+    <div id="design-canvas"></div>
+    <div class="drop-hint" id="drop-hint"><div class="inner">Drop widget here</div></div>
   </div>
 
-  <!-- RIGHT PANEL: PROPERTIES + WIDGET DEMO + CONSOLE -->
-  <div class="right-panel" id="rightPanel">
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
     <!-- PROPERTIES -->
     <div class="win">
       <div class="win-header">🔧 Properties</div>
       <div class="win-body">
-        <div class="row"><span class="label">Name</span><span class="value" id="prop-name">ButtonWidget</span></div>
-        <div class="row"><span class="label">Type</span><span class="value" id="prop-type">ImGui::Button</span></div>
-        <div class="row"><span class="label">Size X</span>
-          <div class="slider" data-target="btnW" data-val="0.4" data-min="20" data-max="300"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
-          <span class="slider-value" id="val-btnW">120</span>
+        <div class="row"><span class="label">Name</span><span class="value" id="prop-name">—</span></div>
+        <div class="row"><span class="label">Type</span><span class="value" id="prop-type">—</span></div>
+        <div class="row"><span class="label">X</span>
+          <div class="slider" data-prop="x" data-min="0" data-max="1200"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+          <span class="slider-value" id="val-x">0</span>
         </div>
-        <div class="row"><span class="label">Size Y</span>
-          <div class="slider" data-target="btnH" data-val="0.15" data-min="10" data-max="100"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
-          <span class="slider-value" id="val-btnH">36</span>
+        <div class="row"><span class="label">Y</span>
+          <div class="slider" data-prop="y" data-min="0" data-max="800"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+          <span class="slider-value" id="val-y">0</span>
+        </div>
+        <div class="row"><span class="label">Width</span>
+          <div class="slider" data-prop="w" data-min="10" data-max="400"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+          <span class="slider-value" id="val-w">100</span>
+        </div>
+        <div class="row"><span class="label">Height</span>
+          <div class="slider" data-prop="h" data-min="10" data-max="300"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
+          <span class="slider-value" id="val-h">30</span>
+        </div>
+        <div class="row"><span class="label">Text</span>
+          <input class="input-field" id="prop-text" placeholder="Widget text..." oninput="updatePropText(this.value)">
         </div>
         <div class="row"><span class="label">Color</span>
           <span class="color-prev" id="color-prev" style="background:#4a9eff" onclick="toggleColorPopup()"></span>
@@ -254,90 +297,37 @@ canvas{display:block}
           </div>
         </div>
         <div class="row"><span class="label">Visible</span>
-          <div class="chk on" onclick="this.classList.toggle('on');toggleProp('visible',this.classList.contains('on'))"><span class="chk-box"></span> Visible</div>
+          <div class="chk on" onclick="this.classList.toggle('on');updateProp('visible',this.classList.contains('on'))"><span class="chk-box"></span> Visible</div>
         </div>
         <div class="row"><span class="label">Enabled</span>
-          <div class="chk on" onclick="this.classList.toggle('on');toggleProp('enabled',this.classList.contains('on'))"><span class="chk-box"></span> Enabled</div>
+          <div class="chk on" onclick="this.classList.toggle('on');updateProp('enabled',this.classList.contains('on'))"><span class="chk-box"></span> Enabled</div>
+        </div>
+        <div class="row" style="gap:4px">
+          <button class="btn danger" onclick="deleteSelected()">🗑️ Delete</button>
+          <button class="btn" onclick="duplicateSelected()">📋 Duplicate</button>
         </div>
       </div>
     </div>
 
-    <!-- WIDGET DEMO WITH TABS -->
+    <!-- HIERARCHY -->
     <div class="win">
-      <div class="win-header">🎨 Widget Demo</div>
-      <div class="win-body">
-        <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:6px">
-          <div class="tab on" onclick="setTab(this,0)">Main</div>
-          <div class="tab" onclick="setTab(this,1)">Advanced</div>
-          <div class="tab" onclick="setTab(this,2)">Metrics</div>
-        </div>
-        <div id="tab-0">
-          <div class="row"><span class="label">Float</span>
-            <div class="slider" data-target="floatVal" data-val="0.5" data-min="0" data-max="1"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
-            <span class="slider-value" id="val-floatVal">0.50</span>
-          </div>
-          <div class="row"><span class="label">Int</span>
-            <div class="slider" data-target="intVal" data-val="0.3" data-min="0" data-max="100"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
-            <span class="slider-value" id="val-intVal">30</span>
-          </div>
-          <div class="row"><span class="label">Speed</span>
-            <div class="slider" data-target="speed" data-val="0.3" data-min="0.1" data-max="5"><div class="slider-track"><div class="slider-fill"></div><div class="slider-knob"></div></div></div>
-            <span class="slider-value" id="val-speed">1.5</span>
-          </div>
-          <div class="row" style="gap:4px">
-            <button class="btn" onclick="addProgress()">📈 Animate</button>
-            <button class="btn" onclick="resetProgress()">↺ Reset</button>
-          </div>
-          <div class="row"><span class="label">Progress</span></div>
-          <div class="progress"><div class="progress-bar" id="prog-bar" style="width:50%"></div></div>
-          <div class="row"><span class="label">Input</span>
-            <input class="input-field" type="text" id="text-input" placeholder="Type here..." value="Hello ImGui" -webkit-user-select:text;user-select:text; oninput="onTextInput(this.value)">
-          </div>
-          <div class="row"><span class="label">Preview</span><span class="value" id="text-preview">Hello ImGui</span></div>
-        </div>
-        <div id="tab-1" style="display:none">
-          <div class="chk on" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Enabled</div>
-          <div class="chk on" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Visible</div>
-          <div class="chk" onclick="this.classList.toggle('on')"><span class="chk-box"></span> No Background</div>
-          <div class="chk" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Mouse Input</div>
-          <div class="chk on" onclick="this.classList.toggle('on')"><span class="chk-box"></span> Keyboard Input</div>
-          <div class="row"><span class="label">Radio:</span></div>
-          <div style="display:flex;gap:12px">
-            <div class="rdio on" onclick="setRadio(this)"><span class="rdio-dot"></span> Option A</div>
-            <div class="rdio" onclick="setRadio(this)"><span class="rdio-dot"></span> Option B</div>
-            <div class="rdio" onclick="setRadio(this)"><span class="rdio-dot"></span> Option C</div>
-          </div>
-          <div class="row"><span class="label">Select:</span></div>
-          <select class="input-field" onchange="menuAction('Selected: '+this.value)">
-            <option>Linear</option>
-            <option>Nearest</option>
-            <option>Cubic</option>
-          </select>
-        </div>
-        <div id="tab-2" style="display:none">
-          <div class="row"><span class="label">FPS</span><span class="value" id="m-fps">60.0</span></div>
-          <div class="row"><span class="label">Frame</span><span class="value" id="m-frame">16.67ms</span></div>
-          <div class="row"><span class="label">Draws</span><span class="value" id="m-draws">0</span></div>
-          <div class="row"><span class="label">Vertices</span><span class="value" id="m-verts">0</span></div>
-          <div class="row"><span class="label">Memory</span><span class="value" id="m-mem">0 KB</span></div>
-        </div>
+      <div class="win-header">📋 Widget List</div>
+      <div class="win-body" id="widget-list" style="max-height:150px;overflow-y:auto">
+        <div class="tree-node" style="color:var(--dim)">No widgets placed</div>
       </div>
     </div>
 
-    <!-- CONSOLE WITH INPUT -->
+    <!-- CONSOLE -->
     <div class="win">
       <div class="win-header">🖥️ Console</div>
-      <div class="win-body" style="font-family:var(--mono);font-size:11px;max-height:200px;overflow-y:auto" id="console-body">
-        <div class="console-line" style="color:var(--green)">[INFO] ImGui context created</div>
-        <div class="console-line" style="color:var(--green)">[INFO] Dark style applied</div>
-        <div class="console-line" style="color:var(--dim)">[INFO] Rendering at 60 FPS</div>
-        <div class="console-line" style="color:var(--orange)">[WARN] Running in canvas mode (no backend)</div>
-        <div class="console-line" style="color:var(--dim)">[INFO] Widget Playground ready</div>
+      <div class="win-body" style="font-family:var(--mono);font-size:11px;max-height:120px;overflow-y:auto" id="console-body">
+        <div class="console-line" style="color:var(--green)">[INFO] Widget Playground ready</div>
+        <div class="console-line" style="color:var(--dim)">[INFO] Drag widgets from toolbox to canvas</div>
       </div>
       <div style="padding:6px 10px;border-top:1px solid var(--border)">
         <div class="console-input">
           <span class="console-prompt">$</span>
-          <input class="input-field" id="console-input-field" placeholder="Type a command... (help, clear, fps, color)" -webkit-user-select:text;user-select:text; onkeydown="if(event.key==='Enter')runConsoleCommand(this.value)">
+          <input class="input-field" id="console-input-field" placeholder="Type a command..." onkeydown="if(event.key==='Enter')runConsoleCommand(this.value)">
         </div>
       </div>
     </div>
@@ -345,13 +335,11 @@ canvas{display:block}
 
   <!-- STATUS BAR -->
   <div class="statusbar">
-    <span>ImGui Widget Playground</span>
+    <span>ImGui Widget Playground — Visual GUI Builder</span>
     <span>|</span>
-    <span id="sb-fps">60.0 FPS</span>
+    <span id="sb-fps">60 FPS</span>
     <span>|</span>
-    <span id="sb-draws">0 draws</span>
-    <span>|</span>
-    <span id="sb-selected">Selected: Viewport</span>
+    <span id="sb-selected">Selected: None</span>
     <span style="flex:1"></span>
     <span style="color:var(--green)" id="sb-status">Ready</span>
   </div>
@@ -359,404 +347,493 @@ canvas{display:block}
 
 <script>
 // === STATE ===
-const state = {
-  btnW: 120, btnH: 36, floatVal: 0.5, intVal: 30, speed: 1.5,
-  color: '#4a9eff',
-  progress: 0.5, progressDir: 1, progressActive: true,
-  textInput: 'Hello ImGui',
-  selectedNode: 'Viewport',
-  sceneGrid: true, sceneFPS: true, sceneAA: true,
-  darkMode: true,
-  widgets: []
+let widgets = [];
+let selectedId = null;
+let nextId = 1;
+let snapToGrid = true;
+let gridSize = 10;
+let darkMode = true;
+let frame = 0, startTime = performance.now(), lastTime = 0, fps = 60;
+
+const canvasWrap = document.getElementById('canvas-wrap');
+const designCanvas = document.getElementById('design-canvas');
+const dropHint = document.getElementById('drop-hint');
+
+// === WIDGET DEFAULTS ===
+const WIDGET_DEFAULTS = {
+  Button:       { w: 100, h: 32, text: 'Button', color: '#4a9eff', type: 'button' },
+  Text:         { w: 80, h: 20, text: 'Text Label', color: '#c8cdd9', type: 'text' },
+  InputText:    { w: 140, h: 24, text: 'Input...', color: '#4a9eff', type: 'input' },
+  Checkbox:     { w: 80, h: 20, text: 'Checkbox', color: '#4a9eff', type: 'checkbox' },
+  RadioButton:  { w: 80, h: 20, text: 'Radio', color: '#4a9eff', type: 'radio' },
+  Slider:       { w: 160, h: 20, text: 'Slider', color: '#4a9eff', type: 'slider' },
+  ProgressBar:  { w: 160, h: 12, text: 'Progress', color: '#4a9eff', type: 'progress' },
+  ColorEdit:    { w: 60, h: 24, text: '', color: '#ab47bc', type: 'color' },
+  Combo:        { w: 120, h: 24, text: 'Select...', color: '#4a9eff', type: 'combo' },
+  Separator:    { w: 200, h: 1, text: '', color: '#2a2d3a', type: 'separator' },
+  Group:        { w: 200, h: 100, text: 'Group', color: '#6b7080', type: 'group' },
+  SameLine:     { w: 60, h: 20, text: 'SameLine', color: '#6b7080', type: 'sameline' }
 };
 
-// === CANVAS ===
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-let W = 0, H = 0, DPR = window.devicePixelRatio || 1;
-function resize() {
-  const vp = canvas.parentElement;
-  W = vp.clientWidth; H = vp.clientHeight;
-  canvas.width = W * DPR; canvas.height = H * DPR;
-  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+// === CANVAS SETUP ===
+function resizeCanvas() {
+  const r = canvasWrap.getBoundingClientRect();
+  designCanvas.style.width = r.width + 'px';
+  designCanvas.style.height = r.height + 'px';
 }
-window.addEventListener('resize', resize);
-resize();
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
-let frame = 0, startTime = performance.now(), lastTime = 0;
-let fps = 60, frameTime = 16.67;
-let drawCalls = 0, vertices = 0;
-let pulseAmt = 0;
+// === DRAG & DROP ===
+let dragType = null;
 
-function loop(ts) {
-  const dt = (ts - lastTime) / 1000;
-  lastTime = ts;
-  const t = (ts - startTime) / 1000;
-  if (dt > 0) { fps = 0.9 * fps + 0.1 * (1/dt); frameTime = dt * 1000; }
-
-  // Background
-  ctx.fillStyle = state.darkMode ? '#0d0e12' : '#f5f5f5';
-  ctx.fillRect(0, 0, W, H);
-
-  drawCalls = 0; vertices = 0;
-
-  // Grid
-  if (state.sceneGrid) {
-    ctx.strokeStyle = state.darkMode ? '#161821' : '#e0e0e0';
-    ctx.lineWidth = 1;
-    const gs = 40;
-    for (let x = 0; x < W; x += gs) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-    for (let y = 0; y < H; y += gs) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-  }
-
-  // Button widget on canvas
-  const speed = state.speed;
-  const btnW = state.btnW + Math.sin(t * speed) * 20;
-  const btnH = state.btnH;
-  const btnX = W/2 - btnW/2;
-  const btnY = H/2 - 80;
-  const btnHover = mouseX > btnX && mouseX < btnX+btnW && mouseY > btnY && mouseY < btnY+btnH;
-
-  // Pulse effect
-  if (pulseAmt > 0) {
-    ctx.fillStyle = `rgba(74,158,255,${pulseAmt * 0.3})`;
-    ctx.fillRect(btnX - 20, btnY - 20, btnW + 40, btnH + 40);
-    pulseAmt -= 0.02;
-  }
-
-  ctx.fillStyle = btnHover ? state.color : (state.darkMode ? '#1c1f2b' : '#e0e0e0');
-  ctx.strokeStyle = btnHover ? state.color : (state.darkMode ? '#2a2d3a' : '#bbb');
-  ctx.lineWidth = 1;
-  ctx.fillRect(btnX, btnY, btnW, btnH);
-  ctx.strokeRect(btnX, btnY, btnW, btnH);
-  ctx.fillStyle = btnHover ? '#fff' : (state.darkMode ? '#c8cdd9' : '#333');
-  ctx.font = '13px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('Click Me!', btnX + btnW/2, btnY + btnH/2 + 4);
-  drawCalls++; vertices += 6;
-
-  // Slider widget on canvas
-  const slY = btnY + 60;
-  ctx.fillStyle = state.darkMode ? '#0a0b0f' : '#eee';
-  ctx.fillRect(W/2 - 100, slY, 200, 4);
-  const slPos = state.floatVal * 200;
-  ctx.fillStyle = state.color;
-  ctx.fillRect(W/2 - 100, slY, slPos, 4);
-  ctx.fillRect(W/2 - 100 + slPos - 6, slY - 8, 12, 20);
-  drawCalls += 2; vertices += 12;
-
-  // Color circles
-  const clY = slY + 40;
-  const hue = (t * 60 * speed) % 360;
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + t * speed * 0.5;
-    const r = 30 + Math.sin(t * 2 + i) * 5;
-    const cx = W/2 + Math.cos(a) * r;
-    const cy = clY + Math.sin(a) * r;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
-    ctx.fillStyle = `hsl(${(hue + i * 45) % 360}, 70%, 60%)`;
-    ctx.fill();
-  }
-  drawCalls += 8; vertices += 32;
-
-  // Progress bar
-  if (state.progressActive) {
-    state.progress += state.progressDir * 0.005 * speed;
-    if (state.progress > 1) { state.progress = 1; state.progressDir = -1; }
-    if (state.progress < 0) { state.progress = 0; state.progressDir = 1; }
-    document.getElementById('prog-bar').style.width = (state.progress * 100) + '%';
-  }
-
-  // Code overlay
-  ctx.textAlign = 'left';
-  ctx.font = '11px monospace';
-  ctx.fillStyle = state.darkMode ? '#6b7080' : '#999';
-  ctx.fillText('ImGui::Button("Click Me!", ImVec2(' + Math.round(btnW) + ', ' + btnH + '))', 16, H - 40);
-  ctx.fillText('ImGui::SliderFloat("Float", &v, 0.0f, 1.0f)', 16, H - 25);
-  ctx.fillText('ImGui::ColorEdit3("Color", &col[0])', 16, H - 10);
-
-  // FPS overlay
-  if (state.sceneFPS) {
-    ctx.font = 'bold 14px monospace';
-    ctx.fillStyle = '#5cb85c';
-    ctx.textAlign = 'right';
-    ctx.fillText(fps.toFixed(0) + ' FPS', W - 16, 24);
-  }
-
-  frame++;
-
-  // Update stats
-  const fpsStr = fps.toFixed(1);
-  document.getElementById('fps-display').textContent = fpsStr + ' FPS';
-  document.getElementById('frame-display').textContent = frame + ' frames';
-  document.getElementById('m-fps').textContent = fpsStr;
-  document.getElementById('m-frame').textContent = frameTime.toFixed(2) + 'ms';
-  document.getElementById('m-draws').textContent = drawCalls;
-  document.getElementById('m-verts').textContent = vertices;
-  document.getElementById('m-mem').textContent = Math.round(frame * 0.05) + ' KB';
-  document.getElementById('canvas-stats').textContent = 'Render: ' + drawCalls + ' draw calls';
-  document.getElementById('sb-fps').textContent = fpsStr + ' FPS';
-  document.getElementById('sb-draws').textContent = drawCalls + ' draws';
-
-  requestAnimationFrame(loop);
+function startDrag(e, el) {
+  dragType = el.dataset.widget;
+  el.classList.add('dragging');
+  e.dataTransfer.setData('text/plain', dragType);
+  e.dataTransfer.effectAllowed = 'copy';
 }
 
-let mouseX = 0, mouseY = 0;
-canvas.addEventListener('mousemove', e => {
-  const rect = canvas.getBoundingClientRect();
-  mouseX = e.clientX - rect.left;
-  mouseY = e.clientY - rect.top;
+canvasWrap.addEventListener('dragover', e => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  dropHint.classList.add('visible');
 });
-canvas.addEventListener('click', () => {
-  pulseAmt = 1;
-  const color = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
-  state.color = color;
-  document.getElementById('color-prev').style.background = color;
-  document.getElementById('color-val').textContent = color;
-  logConsole('[INFO] Button clicked — color set to ' + color, 'accent');
+canvasWrap.addEventListener('dragleave', () => {
+  dropHint.classList.remove('visible');
+});
+canvasWrap.addEventListener('drop', e => {
+  e.preventDefault();
+  dropHint.classList.remove('visible');
+  const type = e.dataTransfer.getData('text/plain');
+  if (!type || !WIDGET_DEFAULTS[type]) return;
+  const rect = canvasWrap.getBoundingClientRect();
+  let x = e.clientX - rect.left;
+  let y = e.clientY - rect.top;
+  if (snapToGrid) { x = Math.round(x/gridSize)*gridSize; y = Math.round(y/gridSize)*gridSize; }
+  addWidget(type, x, y);
 });
 
-// === MENUS ===
-function toggleMenu(id) {
-  const el = document.getElementById(id);
-  const wasOpen = el.classList.contains('open');
-  document.querySelectorAll('.mb-item.open').forEach(m => m.classList.remove('open'));
-  if (!wasOpen) el.classList.add('open');
-}
-document.addEventListener('click', e => {
-  if (!e.target.closest('.mb-item')) {
-    document.querySelectorAll('.mb-item.open').forEach(m => m.classList.remove('open'));
-  }
-});
-
-function menuAction(name) {
-  logConsole('[INFO] ' + name, 'accent');
-  setStatus(name);
+// Click-to-add fallback
+function addWidgetAt(type) {
+  const rect = canvasWrap.getBoundingClientRect();
+  addWidget(type, rect.width/2 - 50, rect.height/2 - 15);
 }
 
-function newProject() {
-  state.widgets = [];
-  logConsole('[INFO] New project created', 'green');
-  setStatus('New Project');
-}
-
-function exportLayout() {
-  const data = JSON.stringify(state, null, 2);
-  logConsole('[INFO] Layout exported (' + data.length + ' bytes)', 'green');
-  navigator.clipboard?.writeText(data);
-  setStatus('Layout Copied to Clipboard');
-}
-
-function addWidget(type) {
-  state.widgets.push({type, id: state.widgets.length});
-  logConsole('[INFO] Added ' + type + ' widget (total: ' + state.widgets.length + ')', 'accent');
-  setStatus('Added ' + type);
-}
-
-function clearWidgets() {
-  state.widgets = [];
-  logConsole('[WARN] All widgets cleared', 'orange');
-  setStatus('Widgets Cleared');
-}
-
-function randomizeColors() {
-  const color = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
-  state.color = color;
-  document.getElementById('color-prev').style.background = color;
-  document.getElementById('color-val').textContent = color;
-  logConsole('[INFO] Color randomized to ' + color, 'accent');
-}
-
-function pulseCanvas() {
-  pulseAmt = 1;
-  logConsole('[INFO] Pulse effect triggered', 'accent');
-}
-
-function showAbout() {
-  logConsole('[INFO] ImGui Widget Playground — imgui_xl', 'green');
-  logConsole('[INFO] Part of Turtle-PB/imgui_xl — MIT License', 'dim');
-  logConsole('[INFO] 3 PRs merged upstream, 5 live demos', 'dim');
-}
-
-// === PANELS ===
-function togglePanel(id) {
-  const el = document.getElementById(id);
-  el.style.display = el.style.display === 'none' ? '' : 'none';
-  setTimeout(resize, 10);
-}
-
-function setDarkMode(dark) {
-  state.darkMode = dark;
-  document.documentElement.style.setProperty('--bg', dark ? '#0d0e12' : '#f5f5f5');
-  document.documentElement.style.setProperty('--panel', dark ? '#161821' : '#ffffff');
-  document.documentElement.style.setProperty('--panel2', dark ? '#1c1f2b' : '#e8e8e8');
-  document.documentElement.style.setProperty('--text', dark ? '#c8cdd9' : '#333');
-  document.documentElement.style.setProperty('--border', dark ? '#2a2d3a' : '#ddd');
-  document.documentElement.style.setProperty('--dim', dark ? '#6b7080' : '#888');
-  document.documentElement.style.setProperty('--bright', dark ? '#e8eaf0' : '#111');
-  document.documentElement.style.setProperty('--input', dark ? '#0a0b0f' : '#f0f0f0');
-  logConsole('[INFO] ' + (dark ? 'Dark' : 'Light') + ' mode enabled', 'green');
-}
-
-// === TREE ===
-function toggleTree(el) {
-  el.classList.toggle('open');
-  const next = el.parentElement.nextElementSibling;
-  if (next && next.classList.contains('tree-children')) {
-    next.classList.toggle('open');
-  }
-}
-
-function selectNode(el, name) {
-  document.querySelectorAll('.tree-node').forEach(n => n.classList.remove('sel'));
-  el.classList.add('sel');
-  state.selectedNode = name;
-  document.getElementById('prop-name').textContent = name;
-  document.getElementById('sb-selected').textContent = 'Selected: ' + name;
-}
-
-// === SLIDERS ===
-document.querySelectorAll('.slider').forEach(s => {
-  let dragging = false;
-  const target = s.dataset.target;
-  const minVal = parseFloat(s.dataset.min || 0);
-  const maxVal = parseFloat(s.dataset.max || 1);
-  const update = e => {
-    const r = s.getBoundingClientRect();
-    let v = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-    s.dataset.val = v;
-    s.querySelector('.slider-fill').style.width = (v*100)+'%';
-    s.querySelector('.slider-knob').style.left = (v*100)+'%';
-    const realVal = minVal + v * (maxVal - minVal);
-    state[target] = realVal;
-    const valEl = document.getElementById('val-' + target);
-    if (valEl) {
-      if (target === 'floatVal' || target === 'speed') valEl.textContent = realVal.toFixed(2);
-      else valEl.textContent = Math.round(realVal);
-    }
+// === WIDGET MANAGEMENT ===
+function addWidget(type, x, y) {
+  const d = WIDGET_DEFAULTS[type];
+  const w = {
+    id: nextId++,
+    type: type,
+    x: Math.max(0, x), y: Math.max(0, y),
+    w: d.w, h: d.h,
+    text: d.text,
+    color: d.color,
+    visible: true, enabled: true
   };
-  s.addEventListener('mousedown', e => { dragging = true; update(e); });
-  window.addEventListener('mousemove', e => { if(dragging) update(e); });
-  window.addEventListener('mouseup', () => dragging = false);
-});
-document.querySelectorAll('.slider').forEach(s => {
-  const v = parseFloat(s.dataset.val || 0.5);
-  s.querySelector('.slider-fill').style.width = (v*100)+'%';
-  s.querySelector('.slider-knob').style.left = (v*100)+'%';
-});
-
-// === TABS ===
-function setTab(el, idx) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
-  el.classList.add('on');
-  [0,1,2].forEach(i => {
-    const t = document.getElementById('tab-' + i);
-    if (t) t.style.display = i === idx ? '' : 'none';
-  });
+  widgets.push(w);
+  renderWidget(w);
+  updateWidgetList();
+  selectWidget(w.id);
+  log(`Added ${type} #${w.id} at (${w.x}, ${w.y})`);
+  updateCount();
 }
 
-// === RADIO ===
-function setRadio(el) {
-  el.parentElement.querySelectorAll('.rdio').forEach(r => r.classList.remove('on'));
-  el.classList.add('on');
-  logConsole('[INFO] Radio: ' + el.textContent.trim(), 'dim');
+function renderWidget(w) {
+  const el = document.createElement('div');
+  el.className = 'pw pw-' + w.type.toLowerCase();
+  el.id = 'pw-' + w.id;
+  el.style.left = w.x + 'px';
+  el.style.top = w.y + 'px';
+  el.style.width = w.w + 'px';
+  el.style.height = w.h + 'px';
+  el.style.zIndex = w.id;
+
+  // Type-specific inner content
+  let inner = '';
+  switch(w.type) {
+    case 'Button': inner = `<span class="pw-label">${w.text}</span>`; break;
+    case 'Text': inner = `<span class="pw-label" style="color:${w.color}">${w.text}</span>`; break;
+    case 'InputText': inner = `<span class="pw-label">${w.text}</span>`; break;
+    case 'Checkbox': inner = `<span class="pw-check ${w.checked?'checked':''}"></span><span class="pw-label">${w.text}</span>`; break;
+    case 'RadioButton': inner = `<span class="pw-dot"></span><span class="pw-label">${w.text}</span>`; break;
+    case 'Slider': inner = `<span class="pw-label">${w.text}</span>`; break;
+    case 'ProgressBar': inner = `<div class="pw-fill" style="width:50%;background:${w.color}"></div>`; break;
+    case 'ColorEdit': inner = `<div class="pw-swatch" style="background:${w.color}"></div>`; break;
+    case 'Combo': inner = `<span class="pw-label">${w.text}</span>`; break;
+    case 'Separator': inner = ''; break;
+    case 'Group': inner = `<span class="pw-label" style="opacity:.5">${w.text}</span>`; break;
+    case 'SameLine': inner = `<span class="pw-label" style="opacity:.5">↔</span>`; break;
+  }
+  el.innerHTML = inner;
+
+  // Resize handle
+  const handle = document.createElement('div');
+  handle.className = 'pw-handle';
+  handle.addEventListener('mousedown', e => startResize(e, w.id));
+  el.appendChild(handle);
+
+  // Move
+  el.addEventListener('mousedown', e => startMove(e, w.id));
+
+  designCanvas.appendChild(el);
 }
 
-// === COLOR POPUP ===
-function toggleColorPopup() {
-  document.getElementById('color-popup').classList.toggle('open');
+function removeWidgetEl(id) {
+  const el = document.getElementById('pw-' + id);
+  if (el) el.remove();
 }
-function setColor(c) {
-  state.color = c;
-  document.getElementById('color-prev').style.background = c;
-  document.getElementById('color-val').textContent = c;
-  document.getElementById('color-popup').classList.remove('open');
-  logConsole('[INFO] Color set to ' + c, 'accent');
+
+// === MOVE / RESIZE ===
+let moveId = null, moveOffX = 0, moveOffY = 0;
+let resizeId = null, resizeStartX = 0, resizeStartY = 0, resizeStartW = 0, resizeStartH = 0;
+
+function startMove(e, id) {
+  if (e.target.classList.contains('pw-handle')) return;
+  e.preventDefault();
+  selectWidget(id);
+  moveId = id;
+  const w = widgets.find(w => w.id === id);
+  moveOffX = e.clientX - w.x;
+  moveOffY = e.clientY - w.y;
 }
-document.addEventListener('click', e => {
-  if (!e.target.closest('#color-prev') && !e.target.closest('#color-popup')) {
-    document.getElementById('color-popup').classList.remove('open');
+
+function startResize(e, id) {
+  e.preventDefault();
+  e.stopPropagation();
+  resizeId = id;
+  const w = widgets.find(w => w.id === id);
+  resizeStartX = e.clientX;
+  resizeStartY = e.clientY;
+  resizeStartW = w.w;
+  resizeStartH = w.h;
+}
+
+document.addEventListener('mousemove', e => {
+  if (moveId !== null) {
+    const w = widgets.find(w => w.id === moveId);
+    let x = e.clientX - moveOffX;
+    let y = e.clientY - moveOffY;
+    if (snapToGrid) { x = Math.round(x/gridSize)*gridSize; y = Math.round(y/gridSize)*gridSize; }
+    w.x = Math.max(0, x); w.y = Math.max(0, y);
+    const el = document.getElementById('pw-' + moveId);
+    if (el) { el.style.left = w.x + 'px'; el.style.top = w.y + 'px'; }
+    updatePropSliders(w);
+  }
+  if (resizeId !== null) {
+    const w = widgets.find(w => w.id === resizeId);
+    w.w = Math.max(10, resizeStartW + (e.clientX - resizeStartX));
+    w.h = Math.max(10, resizeStartH + (e.clientY - resizeStartY));
+    const el = document.getElementById('pw-' + resizeId);
+    if (el) { el.style.width = w.w + 'px'; el.style.height = w.h + 'px'; }
+    updatePropSliders(w);
   }
 });
+document.addEventListener('mouseup', () => { moveId = null; resizeId = null; });
 
-// === PROGRESS ===
-function addProgress() { state.progressActive = true; state.progress = 0; state.progressDir = 1; }
-function resetProgress() { state.progress = 0.5; state.progressActive = false; document.getElementById('prog-bar').style.width = '50%'; }
-
-// === TEXT INPUT ===
-function onTextInput(val) {
-  state.textInput = val;
-  document.getElementById('text-preview').textContent = val;
+// === SELECTION ===
+function selectWidget(id) {
+  selectedId = id;
+  document.querySelectorAll('.pw').forEach(el => el.classList.remove('selected'));
+  const el = document.getElementById('pw-' + id);
+  if (el) el.classList.add('selected');
+  const w = widgets.find(w => w.id === id);
+  if (w) {
+    document.getElementById('prop-name').textContent = w.type + ' #' + w.id;
+    document.getElementById('prop-type').textContent = 'ImGui::' + w.type;
+    document.getElementById('prop-text').value = w.text;
+    document.getElementById('color-val').textContent = w.color;
+    document.getElementById('color-prev').style.background = w.color;
+    updatePropSliders(w);
+    document.getElementById('sb-selected').textContent = 'Selected: ' + w.type + ' #' + w.id;
+  }
 }
 
-// === SCENE SETTINGS ===
-function toggleSceneSetting(key, val) {
-  state['scene' + key.charAt(0).toUpperCase() + key.slice(1)] = val;
-  logConsole('[INFO] ' + key + ': ' + (val ? 'ON' : 'OFF'), 'dim');
+function deselectAll() {
+  selectedId = null;
+  document.querySelectorAll('.pw').forEach(el => el.classList.remove('selected'));
+  document.getElementById('prop-name').textContent = '—';
+  document.getElementById('prop-type').textContent = '—';
+  document.getElementById('sb-selected').textContent = 'Selected: None';
+}
+
+function deleteSelected() {
+  if (selectedId === null) return;
+  const w = widgets.find(w => w.id === selectedId);
+  log(`Deleted ${w.type} #${w.id}`);
+  removeWidgetEl(selectedId);
+  widgets = widgets.filter(w => w.id !== selectedId);
+  deselectAll();
+  updateWidgetList();
+  updateCount();
+}
+
+function duplicateSelected() {
+  if (selectedId === null) return;
+  const w = widgets.find(w => w.id === selectedId);
+  addWidget(w.type, w.x + 20, w.y + 20);
+  const newW = widgets[widgets.length - 1];
+  newW.text = w.text;
+  newW.color = w.color;
+  newW.w = w.w; newW.h = w.h;
+  const el = document.getElementById('pw-' + newW.id);
+  el.style.width = newW.w + 'px'; el.style.height = newW.h + 'px';
+  el.innerHTML = el.innerHTML; // force re-render
+  selectWidget(newW.id);
+  updateWidgetList();
+}
+
+function selectAll() {
+  widgets.forEach(w => {
+    const el = document.getElementById('pw-' + w.id);
+    if (el) el.classList.add('selected');
+  });
+  if (widgets.length > 0) selectedId = widgets[widgets.length-1].id;
+  log('Selected all widgets');
 }
 
 // === PROPERTIES ===
-function toggleProp(key, val) {
-  logConsole('[INFO] ' + key + ': ' + (val ? 'ON' : 'OFF'), 'dim');
+function updatePropSliders(w) {
+  document.getElementById('val-x').textContent = w.x;
+  document.getElementById('val-y').textContent = w.y;
+  document.getElementById('val-w').textContent = w.w;
+  document.getElementById('val-h').textContent = w.h;
+}
+
+function updateProp(key, val) {
+  if (selectedId === null) return;
+  const w = widgets.find(w => w.id === selectedId);
+  w[key] = val;
+  log(`${w.type} #${w.id}: ${key} = ${val}`);
+}
+
+function updatePropText(val) {
+  if (selectedId === null) return;
+  const w = widgets.find(w => w.id === selectedId);
+  w.text = val;
+  const el = document.getElementById('pw-' + selectedId);
+  const label = el.querySelector('.pw-label');
+  if (label) label.textContent = val;
+  updateWidgetList();
+}
+
+function setColor(c) {
+  if (selectedId === null) return;
+  const w = widgets.find(w => w.id === selectedId);
+  w.color = c;
+  document.getElementById('color-val').textContent = c;
+  document.getElementById('color-prev').style.background = c;
+  const el = document.getElementById('pw-' + selectedId);
+  if (w.type === 'ColorEdit') {
+    const sw = el.querySelector('.pw-swatch');
+    if (sw) sw.style.background = c;
+  } else if (w.type === 'ProgressBar') {
+    const fill = el.querySelector('.pw-fill');
+    if (fill) fill.style.background = c;
+  } else if (w.type === 'Button') {
+    el.style.background = c;
+  } else if (w.type === 'Text') {
+    const label = el.querySelector('.pw-label');
+    if (label) label.style.color = c;
+  }
+  document.getElementById('color-popup').classList.remove('open');
+  log(`${w.type} #${w.id}: color = ${c}`);
+}
+
+function toggleColorPopup() {
+  document.getElementById('color-popup').classList.toggle('open');
+}
+
+// === WIDGET LIST ===
+function updateWidgetList() {
+  const list = document.getElementById('widget-list');
+  if (widgets.length === 0) {
+    list.innerHTML = '<div class="tree-node" style="color:var(--dim)">No widgets placed</div>';
+    return;
+  }
+  list.innerHTML = widgets.map(w =>
+    `<div class="tree-node ${w.id===selectedId?'sel':''}" onclick="selectWidget(${w.id})" style="cursor:pointer">
+      <span>${getWidgetIcon(w.type)}</span> ${w.type} #${w.id}
+    </div>`
+  ).join('');
+}
+
+function getWidgetIcon(t) {
+  const icons = {Button:'🔘',Text:'📝',InputText:'⌨️',Checkbox:'☑️',RadioButton:'🔘',Slider:'🎚️',ProgressBar:'📊',ColorEdit:'🎨',Combo:'📋',Separator:'➖',Group:'📦',SameLine:'↔️'};
+  return icons[t] || '🔧';
+}
+
+// === MENUS ===
+function toggleMenu(id) {
+  const item = document.getElementById(id);
+  const wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.mb-item').forEach(el => el.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.mb-item')) document.querySelectorAll('.mb-item').forEach(el => el.classList.remove('open'));
+});
+
+function menuAction(name) {
+  log(`Menu: ${name}`);
+  document.querySelectorAll('.mb-item').forEach(el => el.classList.remove('open'));
+}
+
+function newProject() {
+  if (widgets.length > 0 && !confirm('Clear all widgets?')) return;
+  widgets = [];
+  designCanvas.innerHTML = '';
+  nextId = 1;
+  deselectAll();
+  updateWidgetList();
+  updateCount();
+  log('New project started');
+  menuAction('New Project');
+}
+
+function exportLayout() {
+  const data = JSON.stringify(widgets, null, 2);
+  navigator.clipboard.writeText(data).then(() => {
+    log('Layout JSON copied to clipboard (' + widgets.length + ' widgets)');
+  });
+  menuAction('Export Layout');
+}
+
+function exportImGuiCode() {
+  let code = '// Generated by ImGui Widget Playground\n';
+  code += 'if (ImGui::Begin("My Window"))\n{\n';
+  widgets.forEach(w => {
+    switch(w.type) {
+      case 'Button': code += `    if (ImGui::Button("${w.text}")) { /* clicked */ }\n`; break;
+      case 'Text': code += `    ImGui::Text("${w.text}");\n`; break;
+      case 'InputText': code += `    static char buf${w.id}[256] = "${w.text}";\n    ImGui::InputText("##input${w.id}", buf${w.id}, 256);\n`; break;
+      case 'Checkbox': code += `    static bool check${w.id} = false;\n    ImGui::Checkbox("${w.text}", &check${w.id});\n`; break;
+      case 'RadioButton': code += `    static int radio${w.id} = 0;\n    ImGui::RadioButton("${w.text}", &radio${w.id}, 0);\n`; break;
+      case 'Slider': code += `    static float slider${w.id} = 0.5f;\n    ImGui::SliderFloat("##slider${w.id}", &slider${w.id}, 0.0f, 1.0f);\n`; break;
+      case 'ProgressBar': code += `    ImGui::ProgressBar(0.5f, ImVec2(${w.w}, ${w.h}));\n`; break;
+      case 'ColorEdit': code += `    static float col${w.id}[4] = {0.29f, 0.62f, 1.0f, 1.0f};\n    ImGui::ColorEdit4("##color${w.id}", col${w.id});\n`; break;
+      case 'Combo': code += `    static int combo${w.id} = 0;\n    const char* items${w.id}[] = {"Option A", "Option B", "Option C"};\n    ImGui::Combo("##combo${w.id}", &combo${w.id}, items${w.id}, 3);\n`; break;
+      case 'Separator': code += `    ImGui::Separator();\n`; break;
+      case 'Group': code += `    ImGui::BeginGroup();\n    // ... group contents ...\n    ImGui::EndGroup();\n`; break;
+      case 'SameLine': code += `    ImGui::SameLine();\n`; break;
+    }
+    code += `    // Position: (${w.x}, ${w.y}) Size: (${w.w} x ${w.h})\n`;
+  });
+  code += '}\nImGui::End();\n';
+  navigator.clipboard.writeText(code).then(() => {
+    log('ImGui C++ code copied to clipboard (' + widgets.length + ' widgets)');
+  });
+  menuAction('Export ImGui Code');
+}
+
+function toggleGrid() {
+  // Simple visual feedback
+  log('Grid toggled');
+  menuAction('Toggle Grid');
+}
+
+function setDarkMode(dark) {
+  darkMode = dark;
+  if (dark) {
+    document.documentElement.style.setProperty('--bg','#0d0e12');
+    document.documentElement.style.setProperty('--panel','#161821');
+    document.documentElement.style.setProperty('--panel2','#1c1f2b');
+    document.documentElement.style.setProperty('--input','#0a0b0f');
+    document.documentElement.style.setProperty('--border','#2a2d3a');
+    document.documentElement.style.setProperty('--text','#c8cdd9');
+    document.documentElement.style.setProperty('--dim','#6b7080');
+    document.documentElement.style.setProperty('--bright','#e8eaf0');
+  } else {
+    document.documentElement.style.setProperty('--bg','#f5f5f5');
+    document.documentElement.style.setProperty('--panel','#e8e8e8');
+    document.documentElement.style.setProperty('--panel2','#ddd');
+    document.documentElement.style.setProperty('--input','#fff');
+    document.documentElement.style.setProperty('--border','#bbb');
+    document.documentElement.style.setProperty('--text','#333');
+    document.documentElement.style.setProperty('--dim','#666');
+    document.documentElement.style.setProperty('--bright','#000');
+  }
+  log(dark ? 'Dark mode' : 'Light mode');
+  menuAction(dark ? 'Dark Mode' : 'Light Mode');
+}
+
+function clearWidgets() {
+  widgets = [];
+  designCanvas.innerHTML = '';
+  deselectAll();
+  updateWidgetList();
+  updateCount();
+  log('All widgets cleared');
+  menuAction('Clear All');
+}
+
+function showAbout() {
+  log('Widget Playground v2.0 — Visual GUI Builder for Dear ImGui');
+  log('Drag widgets from toolbox, position on canvas, export ImGui code');
+  menuAction('About');
 }
 
 // === CONSOLE ===
-function logConsole(msg, color) {
+function log(msg) {
   const body = document.getElementById('console-body');
   const line = document.createElement('div');
   line.className = 'console-line';
-  const colors = {green:'var(--green)',orange:'var(--orange)',accent:'var(--accent)',red:'var(--red)',dim:'var(--dim)'};
-  line.style.color = colors[color] || 'var(--text)';
-  line.textContent = msg;
+  line.style.color = 'var(--dim)';
+  line.textContent = '[LOG] ' + msg;
   body.appendChild(line);
   body.scrollTop = body.scrollHeight;
-  // Keep max 50 lines
-  while (body.children.length > 50) body.removeChild(body.firstChild);
+  while (body.children.length > 100) body.removeChild(body.firstChild);
 }
 
 function runConsoleCommand(cmd) {
-  if (!cmd.trim()) return;
-  logConsole('$ ' + cmd, 'green');
-  cmd = cmd.trim().toLowerCase();
-  if (cmd === 'help') {
-    logConsole('Commands: help, clear, fps, color, dark, light, widgets, about', 'dim');
-  } else if (cmd === 'clear') {
-    document.getElementById('console-body').innerHTML = '';
-    logConsole('[INFO] Console cleared', 'dim');
-  } else if (cmd === 'fps') {
-    logConsole('[INFO] Current FPS: ' + fps.toFixed(1), 'accent');
-  } else if (cmd.startsWith('color')) {
-    randomizeColors();
-  } else if (cmd === 'dark') {
-    setDarkMode(true);
-  } else if (cmd === 'light') {
-    setDarkMode(false);
-  } else if (cmd === 'widgets') {
-    logConsole('[INFO] Widgets: ' + state.widgets.length + ' custom + 3 canvas widgets', 'dim');
-  } else if (cmd === 'about') {
-    showAbout();
-  } else {
-    logConsole('[ERR] Unknown command: ' + cmd + ' (type "help")', 'red');
+  const input = document.getElementById('console-input-field');
+  input.value = '';
+  const parts = cmd.trim().split(/\s+/);
+  const c = parts[0].toLowerCase();
+  log('$ ' + cmd);
+  switch(c) {
+    case 'help': log('Commands: clear, count, list, delete <id>, export, about'); break;
+    case 'clear': document.getElementById('console-body').innerHTML = ''; log('Console cleared'); break;
+    case 'count': log(widgets.length + ' widgets placed'); break;
+    case 'list': widgets.forEach(w => log(`  #${w.id}: ${w.type} "${w.text}" at (${w.x},${w.y}) ${w.w}x${w.h}`)); break;
+    case 'delete': if(parts[1]) { const id = parseInt(parts[1]); removeWidgetEl(id); widgets = widgets.filter(w=>w.id!==id); updateWidgetList(); updateCount(); log('Deleted widget #'+id); } break;
+    case 'export': exportLayout(); break;
+    case 'about': showAbout(); break;
+    default: log('Unknown command: ' + c + ' (type "help")');
   }
-  document.getElementById('console-input-field').value = '';
 }
 
-// === STATUS ===
-function setStatus(msg) {
-  document.getElementById('sb-status').textContent = msg;
-  setTimeout(() => { document.getElementById('sb-status').textContent = 'Ready'; }, 2000);
+// === FPS LOOP ===
+function loop(ts) {
+  const dt = (ts - lastTime) / 1000;
+  lastTime = ts;
+  if (dt > 0) fps = 0.9 * fps + 0.1 * (1/dt);
+  frame++;
+  document.getElementById('fps-display').textContent = fps.toFixed(0) + ' FPS';
+  document.getElementById('sb-fps').textContent = fps.toFixed(0) + ' FPS';
+  requestAnimationFrame(loop);
 }
+requestAnimationFrame(loop);
 
-// Keyboard shortcuts
+// === KEYBOARD ===
 document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelected(); }
   if (e.ctrlKey && e.key === 'n') { e.preventDefault(); newProject(); }
   if (e.ctrlKey && e.key === 'e') { e.preventDefault(); exportLayout(); }
-  if (e.key === 'Escape') { document.querySelectorAll('.mb-item.open').forEach(m => m.classList.remove('open')); }
+  if (e.key === 'Escape') { deselectAll(); document.querySelectorAll('.mb-item').forEach(el=>el.classList.remove('open')); }
 });
 
-requestAnimationFrame(loop);
+function updateCount() {
+  document.getElementById('widget-count').textContent = widgets.length + ' widgets';
+}
+
+// Init
+updateWidgetList();
+updateCount();
+log('Widget Playground v2.0 initialized');
+log('Drag widgets from the toolbox onto the canvas');
 </script>
 </body>
 </html>

@@ -133,6 +133,24 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 .tree-node.sel{color:var(--accent)}
 
 .statusbar{grid-column:1/-1;display:flex;align-items:center;background:var(--panel);border-top:1px solid var(--border);padding:0 12px;font-family:var(--mono);font-size:11px;color:var(--dim);gap:12px}
+
+/* === PERFORM MODE (interactive widgets) === */
+.pw.perform{cursor:pointer}
+.pw.perform .pw-label{pointer-events:none}
+.pw.performing-btn:active{filter:brightness(1.6)}
+.pw.lit{border-color:var(--green)!important;box-shadow:0 0 8px rgba(92,184,92,.6)!important}
+
+/* Perform-mode overlay canvases (sliders, jog wheels, vu meters) */
+.pw-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+
+/* MIDI status indicator */
+.midi-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--dim);margin-right:4px;vertical-align:middle}
+.midi-dot.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+.midi-dot.rx{background:var(--accent)}
+
+/* MIDI learn highlight */
+.pw.midi-learning{border-color:var(--orange)!important;box-shadow:0 0 0 2px var(--orange),0 0 12px rgba(240,173,78,.5)!important;animation:midiPulse 1s infinite}
+@keyframes midiPulse{0%,100%{box-shadow:0 0 0 2px var(--orange),0 0 6px rgba(240,173,78,.4)}50%{box-shadow:0 0 0 2px var(--orange),0 0 16px rgba(240,173,78,.8)}}
 </style>
 </head>
 <body>
@@ -190,6 +208,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
         <div class="mb-dd-item" onclick="openDJS11()"><span>🎛️</span> <b>Pioneer DJ-S11 Mixer</b></div>
       </div>
     </div>
+    <div class="mb-item" id="mb-midi" onclick="toggleMenu('mb-midi')">
+      🎹 MIDI
+      <div class="mb-dropdown">
+        <div class="mb-dd-item" onclick="midiConnect()"><span>🔌</span> Connect MIDI Device</div>
+        <div class="mb-dd-item" onclick="midiRescan()"><span>🔄</span> Rescan Devices</div>
+        <div class="mb-dd-sep"></div>
+        <div class="mb-dd-item" onclick="midiLearnToggle()"><span>🎯</span> <span id="midi-learn-label">MIDI Learn: OFF</span><span class="mb-dd-shortcut">L</span></div>
+        <div class="mb-dd-item" onclick="midiExportMappings()"><span>💾</span> Export Mappings (JSON)</div>
+        <div class="mb-dd-item" onclick="midiClearMappings()"><span>🧹</span> Clear Mappings</div>
+        <div class="mb-dd-sep"></div>
+        <div class="mb-dd-item" onclick="midiLoadNumarkPreset()"><span>🎛️</span> Load Numark Mixstream Preset</div>
+      </div>
+    </div>
     <div class="mb-item" id="mb-tools" onclick="toggleMenu('mb-tools')">
       Tools
       <div class="mb-dropdown">
@@ -206,6 +237,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
       </div>
     </div>
     <div class="mb-spacer"></div>
+    <div class="mb-item" id="mb-perform" onclick="togglePerformMode()" style="border:1px solid var(--border);border-radius:3px;margin:4px;padding:0 10px;height:28px">
+      <span id="perform-label">▶ Perform</span>
+    </div>
+    <div class="mb-sep"></div>
+    <div class="mb-right" id="midi-status"><span class="midi-dot" id="midi-dot"></span><span id="midi-status-text">MIDI: off</span></div>
+    <div class="mb-sep"></div>
     <div class="mb-right" id="widget-count">0 widgets</div>
     <div class="mb-sep"></div>
     <div class="mb-right" id="fps-display">60 FPS</div>
@@ -352,6 +389,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
     <span id="sb-fps">60 FPS</span>
     <span>|</span>
     <span id="sb-selected">Selected: None</span>
+    <span>|</span>
+    <span id="sb-midi"><span class="midi-dot" id="sb-midi-dot"></span>MIDI: off</span>
     <span style="flex:1"></span>
     <span style="color:var(--green)" id="sb-status">Ready</span>
   </div>
@@ -551,6 +590,17 @@ function selectWidget(id) {
   document.querySelectorAll('.pw').forEach(el => el.classList.remove('selected'));
   const el = document.getElementById('pw-' + id);
   if (el) el.classList.add('selected');
+  // MIDI Learn: clicking a widget in design mode targets it
+  if (midiLearning && !performMode) {
+    if (midiLearnTarget !== null) {
+      const prev = document.getElementById('pw-' + midiLearnTarget);
+      if (prev) prev.classList.remove('midi-learning');
+    }
+    midiLearnTarget = id;
+    if (el) el.classList.add('midi-learning');
+    const w0 = widgets.find(w => w.id === id);
+    log(`🎯 Learn target: ${w0 ? w0.type + ' "' + w0.text + '"' : '#'+id} — move a control on your MIDI device`);
+  }
   const w = widgets.find(w => w.id === id);
   if (w) {
     document.getElementById('prop-name').textContent = w.type + ' #' + w.id;
@@ -1008,7 +1058,11 @@ function runConsoleCommand(cmd) {
   const c = parts[0].toLowerCase();
   log('$ ' + cmd);
   switch(c) {
-    case 'help': log('Commands: clear, count, list, delete <id>, export, about'); break;
+    case 'help': log('Commands: clear, count, list, delete <id>, export, about, midi, perform, learn, mappings'); break;
+    case 'midi': midiConnect(); break;
+    case 'perform': togglePerformMode(); break;
+    case 'learn': midiLearnToggle(); break;
+    case 'mappings': log('MIDI mappings: ' + (Object.keys(midiMappings).length ? JSON.stringify(midiMappings, null, 1) : 'none')); break;
     case 'clear': document.getElementById('console-body').innerHTML = ''; log('Console cleared'); break;
     case 'count': log(widgets.length + ' widgets placed'); break;
     case 'list': widgets.forEach(w => log(`  #${w.id}: ${w.type} "${w.text}" at (${w.x},${w.y}) ${w.w}x${w.h}`)); break;
@@ -1018,6 +1072,363 @@ function runConsoleCommand(cmd) {
     default: log('Unknown command: ' + c + ' (type "help")');
   }
 }
+
+// === PERFORM MODE ===
+let performMode = false;
+const widgetStates = {}; // id -> {value:0..1, on:bool, jogAngle, vuLevel}
+
+function togglePerformMode() {
+  performMode = !performMode;
+  document.getElementById('perform-label').textContent = performMode ? '⏹ Stop' : '▶ Perform';
+  document.getElementById('mb-perform').style.borderColor = performMode ? 'var(--green)' : 'var(--border)';
+  document.getElementById('mb-perform').style.color = performMode ? 'var(--green)' : '';
+  document.querySelectorAll('.pw').forEach(el => el.classList.toggle('perform', performMode));
+  deselectAll();
+  log(performMode ? '🎛️ Perform mode ON — widgets are now live controls' : '✏️ Design mode — drag & edit widgets');
+  if (performMode) initPerformStates();
+}
+
+function initPerformStates() {
+  widgets.forEach(w => {
+    if (!widgetStates[w.id]) widgetStates[w.id] = { value: 0.5, on: false, jogAngle: 0, vuLevel: 0 };
+    drawWidgetOverlay(w);
+  });
+}
+
+// Draw interactive overlays (slider fills, VU meters, jog wheels)
+function drawWidgetOverlay(w) {
+  const el = document.getElementById('pw-' + w.id);
+  if (!el) return;
+  let cv = el.querySelector('.pw-overlay');
+  if (!cv) {
+    cv = document.createElement('canvas');
+    cv.className = 'pw-overlay';
+    el.appendChild(cv);
+  }
+  const rect = el.getBoundingClientRect();
+  cv.width = Math.max(1, rect.width); cv.height = Math.max(1, rect.height);
+  const c = cv.getContext('2d');
+  const st = widgetStates[w.id];
+  c.clearRect(0, 0, cv.width, cv.height);
+
+  if (w.type === 'Slider' || w.type === 'ProgressBar') {
+    const vert = rect.height > rect.width * 1.5;
+    c.fillStyle = 'rgba(74,158,255,0.9)';
+    if (vert) {
+      const h = rect.height * st.value;
+      c.fillRect(0, rect.height - h, rect.width, h);
+      // knob line
+      c.fillStyle = '#fff';
+      c.fillRect(0, rect.height - h - 1, rect.width, 2);
+    } else {
+      const wd = rect.width * st.value;
+      c.fillRect(0, 0, wd, rect.height);
+      c.fillStyle = '#fff';
+      c.fillRect(wd - 1, 0, 2, rect.height);
+    }
+  } else if (w.type === 'Group' && w.text === '' && w.w === 140 && w.h === 140) {
+    // Jog wheel (140x140 empty group)
+    c.strokeStyle = '#4a9eff'; c.lineWidth = 3;
+    c.beginPath(); c.arc(rect.width/2, rect.height/2, rect.width/2 - 4, 0, Math.PI*2); c.stroke();
+    c.strokeStyle = '#2a2d3a'; c.lineWidth = 1;
+    c.beginPath(); c.arc(rect.width/2, rect.height/2, rect.width/2 - 14, 0, Math.PI*2); c.stroke();
+    // position marker
+    const a = st.jogAngle;
+    const mx = rect.width/2 + Math.cos(a) * (rect.width/2 - 9);
+    const my = rect.height/2 + Math.sin(a) * (rect.height/2 - 9);
+    c.fillStyle = '#fff';
+    c.beginPath(); c.arc(mx, my, 5, 0, Math.PI*2); c.fill();
+  }
+}
+
+// Widget interaction in perform mode
+function performInteract(w, e, el) {
+  const st = widgetStates[w.id] || (widgetStates[w.id] = { value: 0.5, on: false, jogAngle: 0, vuLevel: 0 });
+  const rect = el.getBoundingClientRect();
+
+  if (w.type === 'Button') {
+    st.on = !st.on;
+    el.classList.toggle('lit', st.on);
+    el.style.filter = st.on ? 'brightness(1.5)' : '';
+    log(`🎛️ ${w.text}: ${st.on ? 'ON' : 'OFF'}`);
+    midiSendFeedback(w, st.on ? 127 : 0);
+  } else if (w.type === 'Checkbox' || w.type === 'RadioButton') {
+    st.on = !st.on;
+    el.classList.toggle('lit', st.on);
+    log(`🎛️ ${w.text}: ${st.on ? 'checked' : 'unchecked'}`);
+    midiSendFeedback(w, st.on ? 127 : 0);
+  } else if (w.type === 'Slider' || w.type === 'ProgressBar') {
+    const vert = rect.height > rect.width * 1.5;
+    let v;
+    if (vert) v = 1 - (e.clientY - rect.top) / rect.height;
+    else v = (e.clientX - rect.left) / rect.width;
+    st.value = Math.max(0, Math.min(1, v));
+    drawWidgetOverlay(w);
+    if (w.type === 'Slider') log(`🎛️ ${w.text}: ${(st.value * 100).toFixed(0)}%`);
+  } else if (w.type === 'Combo') {
+    const opts = ['ECHO', 'REVERB', 'FLANGER', 'FILTER', 'DELAY', 'PHASER'];
+    const cur = opts.indexOf(w.text);
+    w.text = opts[(cur + 1) % opts.length];
+    const label = el.querySelector('.pw-label');
+    if (label) label.textContent = w.text;
+    log(`🎛️ FX select: ${w.text}`);
+  }
+}
+
+// Drag on sliders / jog wheels
+let performDragId = null, performJogLast = null;
+
+document.addEventListener('mousedown', e => {
+  if (!performMode) return;
+  const el = e.target.closest('.pw');
+  if (!el) return;
+  e.preventDefault(); e.stopPropagation();
+  const id = parseInt(el.id.replace('pw-', ''));
+  const w = widgets.find(w => w.id === id);
+  if (!w) return;
+
+  if (w.type === 'Slider' || w.type === 'ProgressBar') {
+    performDragId = id;
+    performInteract(w, e, el);
+  } else if (w.type === 'Group' && w.text === '' && w.w === 140 && w.h === 140) {
+    performDragId = id;
+    performJogLast = { x: e.clientX, y: e.clientY };
+  } else {
+    performInteract(w, e, el);
+  }
+}, true);
+
+document.addEventListener('mousemove', e => {
+  if (!performMode || performDragId === null) return;
+  const w = widgets.find(w => w.id === performDragId);
+  if (!w) return;
+  const el = document.getElementById('pw-' + performDragId);
+  const st = widgetStates[w.id];
+  const rect = el.getBoundingClientRect();
+
+  if (w.type === 'Slider' || w.type === 'ProgressBar') {
+    const vert = rect.height > rect.width * 1.5;
+    let v;
+    if (vert) v = 1 - (e.clientY - rect.top) / rect.height;
+    else v = (e.clientX - rect.left) / rect.width;
+    st.value = Math.max(0, Math.min(1, v));
+    drawWidgetOverlay(w);
+  } else if (w.type === 'Group' && w.text === '' && w.w === 140 && w.h === 140) {
+    // Jog wheel rotate
+    const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
+    const a1 = Math.atan2(performJogLast.y - cy, performJogLast.x - cx);
+    const a2 = Math.atan2(e.clientY - cy, e.clientX - cx);
+    st.jogAngle += a2 - a1;
+    performJogLast = { x: e.clientX, y: e.clientY };
+    drawWidgetOverlay(w);
+  }
+});
+
+document.addEventListener('mouseup', () => { performDragId = null; });
+
+// === WEB MIDI SUPPORT ===
+let midiAccess = null;
+let midiInputs = new Map();
+let midiLearning = false;
+let midiLearnTarget = null;
+let midiMappings = {}; // widgetId -> {type:'cc'|'note', channel, number}
+let midiLastMsg = null;
+
+function midiSupported() {
+  return typeof navigator.requestMIDIAccess === 'function';
+}
+
+async function midiConnect() {
+  if (!midiSupported()) {
+    log('❌ Web MIDI not supported in this browser (use Chrome/Edge/Opera)');
+    return;
+  }
+  try {
+    midiAccess = await navigator.requestMIDIAccess({ sysex: false });
+    log('🎹 MIDI access granted');
+    midiScanInputs();
+    midiAccess.onstatechange = (e) => {
+      log(`🎹 Device ${e.port.state}: ${e.port.name}`);
+      midiScanInputs();
+    };
+  } catch (err) {
+    log('❌ MIDI access denied: ' + err.message);
+  }
+  menuAction('Connect MIDI');
+}
+
+function midiScanInputs() {
+  midiInputs.clear();
+  let count = 0;
+  for (const input of midiAccess.inputs.values()) {
+    midiInputs.set(input.id, input);
+    input.onmidimessage = (msg) => midiHandleMessage(msg, input);
+    log(`🎹 Found input: ${input.name} (${input.manufacturer || 'unknown'})`);
+    count++;
+  }
+  if (count === 0) log('🎹 No MIDI inputs found — connect your controller');
+  updateMidiStatus(count > 0, count);
+}
+
+function midiRescan() {
+  if (!midiAccess) { midiConnect(); return; }
+  midiScanInputs();
+  menuAction('Rescan MIDI');
+}
+
+function updateMidiStatus(connected, count) {
+  const txt = connected ? `MIDI: ${count} device${count>1?'s':''}` : 'MIDI: off';
+  document.getElementById('midi-status-text').textContent = txt;
+  document.getElementById('sb-midi').innerHTML = `<span class="midi-dot ${connected?'on':''}" id="sb-midi-dot"></span>${txt}`;
+  document.getElementById('midi-dot').className = 'midi-dot' + (connected ? ' on' : '');
+}
+
+function midiHandleMessage(msg, input) {
+  const [status, d1, d2] = msg.data;
+  const type = status & 0xF0;
+  const channel = (status & 0x0F) + 1;
+
+  // Flash RX indicator
+  const dot = document.getElementById('midi-dot');
+  dot.className = 'midi-dot rx';
+  setTimeout(() => { if (midiInputs.size > 0) dot.className = 'midi-dot on'; }, 80);
+
+  midiLastMsg = { type, channel, d1, d2, device: input.name, time: Date.now() };
+
+  // MIDI Learn capture
+  if (midiLearning && midiLearnTarget !== null) {
+    if (type === 0xB0 || type === 0x90) {
+      const mType = type === 0xB0 ? 'cc' : 'note';
+      midiMappings[midiLearnTarget] = { type: mType, channel, number: d1 };
+      const w = widgets.find(w => w.id === midiLearnTarget);
+      log(`🎯 Learned: ${w ? w.text : '#'+midiLearnTarget} ← ${mType.toUpperCase()} ch${channel} #${d1} (${input.name})`);
+      const el = document.getElementById('pw-' + midiLearnTarget);
+      if (el) el.classList.remove('midi-learning');
+      midiLearnTarget = null;
+      return;
+    }
+  }
+
+  // Apply mappings
+  for (const [wId, map] of Object.entries(midiMappings)) {
+    if (map.type === 'cc' && type === 0xB0 && map.channel === channel && map.number === d1) {
+      midiApplyToWidget(parseInt(wId), d2 / 127, `CC${d1}=${d2}`);
+    } else if (map.type === 'note' && (type === 0x90 || type === 0x80) && map.channel === channel && map.number === d1) {
+      const isDown = type === 0x90 && d2 > 0;
+      midiApplyToWidget(parseInt(wId), isDown ? 1 : 0, `Note${d1} ${isDown?'ON':'OFF'}`);
+    }
+  }
+}
+
+function midiApplyToWidget(id, value, source) {
+  const w = widgets.find(w => w.id === id);
+  if (!w) return;
+  const el = document.getElementById('pw-' + id);
+  const st = widgetStates[id] || (widgetStates[id] = { value: 0.5, on: false, jogAngle: 0, vuLevel: 0 });
+
+  if (w.type === 'Button' || w.type === 'Checkbox' || w.type === 'RadioButton') {
+    if (value > 0) { // only on note-on / press
+      st.on = !st.on;
+      el.classList.toggle('lit', st.on);
+      el.style.filter = st.on ? 'brightness(1.5)' : '';
+      log(`🎹 ${w.text}: ${st.on ? 'ON' : 'OFF'} (${source})`);
+    }
+  } else if (w.type === 'Slider' || w.type === 'ProgressBar') {
+    st.value = value;
+    drawWidgetOverlay(w);
+  } else if (w.type === 'Group' && w.text === '' && w.w === 140 && w.h === 140) {
+    // Jog wheel via relative CC
+    st.jogAngle += (value - 0.5) * 0.5;
+    drawWidgetOverlay(w);
+  }
+}
+
+function midiLearnToggle() {
+  midiLearning = !midiLearning;
+  document.getElementById('midi-learn-label').textContent = midiLearning ? 'MIDI Learn: ON' : 'MIDI Learn: OFF';
+  if (!midiLearning && midiLearnTarget !== null) {
+    const el = document.getElementById('pw-' + midiLearnTarget);
+    if (el) el.classList.remove('midi-learning');
+    midiLearnTarget = null;
+  }
+  log(midiLearning ? '🎯 MIDI Learn ON — click a widget, then move a control on your device' : '🎯 MIDI Learn OFF');
+  menuAction('MIDI Learn');
+}
+
+function midiExportMappings() {
+  const data = JSON.stringify({ mappings: midiMappings, device: 'WebMIDI', version: 1 }, null, 2);
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(data).then(() => log('💾 MIDI mappings copied to clipboard'));
+  }
+  log('💾 MIDI mappings: ' + JSON.stringify(midiMappings));
+  menuAction('Export Mappings');
+}
+
+function midiClearMappings() {
+  midiMappings = {};
+  log('🧹 All MIDI mappings cleared');
+  menuAction('Clear Mappings');
+}
+
+// Numark Mixstream Pro preset — common CC assignments (user-adjustable via Learn)
+function midiLoadNumarkPreset() {
+  // First, map by widget text labels if DJ-S11 layout is loaded
+  const byText = {};
+  widgets.forEach(w => { byText[w.text + '|' + w.type] = w.id; });
+
+  const preset = [
+    // [widgetText, widgetType, midiType, channel, number]
+    ['', 'Slider', 'cc', 1, 7],     // master volume fallback
+    ['HI', 'Slider', 'cc', 1, 20],  // EQ high ch1
+    ['MID', 'Slider', 'cc', 1, 21], // EQ mid ch1
+    ['LOW', 'Slider', 'cc', 1, 22], // EQ low ch1
+  ];
+  let mapped = 0;
+  widgets.forEach(w => {
+    if (w.type === 'Slider') {
+      // assign sequential CCs to sliders as a starter preset
+      midiMappings[w.id] = { type: 'cc', channel: 1, number: 7 + mapped };
+      mapped++;
+    }
+  });
+  log(`🎛️ Numark Mixstream preset loaded: ${mapped} sliders mapped to CC ch1`);
+  log('🎯 Use MIDI Learn to fine-map specific controls to your hardware');
+  menuAction('Numark Preset');
+}
+
+// Send MIDI feedback back to controller (LED rings, motor faders)
+function midiSendFeedback(w, value) {
+  if (!midiAccess) return;
+  const map = midiMappings[w.id];
+  if (!map) return;
+  for (const output of midiAccess.outputs.values()) {
+    if (map.type === 'cc') output.send([0xB0 | (map.channel - 1), map.number, value]);
+    else output.send([0x90 | (map.channel - 1), map.number, value]);
+  }
+}
+
+// VU meter animation loop (visual only, in perform mode)
+let vuPhase = 0;
+function animateVU() {
+  if (performMode) {
+    vuPhase += 0.05;
+    widgets.forEach(w => {
+      if (w.type === 'ProgressBar') {
+        const st = widgetStates[w.id];
+        if (st && !midiMappings[w.id]) {
+          // Auto-animate VU-style bars that aren't MIDI-mapped
+          const vert = w.h > w.w;
+          if (vert) {
+            st.value = Math.max(0, Math.min(1, 0.6 + Math.sin(vuPhase + w.id) * 0.25 + (Math.random() - 0.5) * 0.1));
+            drawWidgetOverlay(w);
+          }
+        }
+      }
+    });
+  }
+  requestAnimationFrame(animateVU);
+}
+requestAnimationFrame(animateVU);
 
 // === FPS LOOP ===
 function loop(ts) {
@@ -1037,6 +1448,8 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelected(); }
   if (e.ctrlKey && e.key === 'n') { e.preventDefault(); newProject(); }
   if (e.ctrlKey && e.key === 'e') { e.preventDefault(); exportLayout(); }
+  if (e.key === 'l' || e.key === 'L') { e.preventDefault(); midiLearnToggle(); }
+  if (e.key === 'p' || e.key === 'P') { e.preventDefault(); togglePerformMode(); }
   if (e.key === 'Escape') { deselectAll(); document.querySelectorAll('.mb-item').forEach(el=>el.classList.remove('open')); }
 });
 

@@ -4250,6 +4250,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     HoveredIdIsDisabled = false;
     HoveredIdTimer = HoveredIdNotActiveTimer = 0.0f;
     ItemUnclipByLog = false;
+    AnyIdHasBeenEditedThisFrame = false;
     ActiveId = 0;
     ActiveIdIsAlive = 0;
     ActiveIdTimer = 0.0f;
@@ -4833,6 +4834,7 @@ void ImGui::MarkItemEdited(ImGuiID id)
     // ActiveId might have been released by the time we call this (as in the typical press/release button behavior) but still need to fill the data.
     ImGuiContext& g = *GImGui;
 
+    //IM_ASSERT(g.LastItemData.ID == id); // Failing cases include: "widgets_inputtext_scrolling", "widgets_inputtext_multiline_status", "widgets_selectable_input" = case of e.g TempInputText() overlayed manually with different ID (#2718)
     g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_EditedInternal;
     if (g.LastItemData.ItemFlags & ImGuiItemFlags_NoMarkEdited)
         return;
@@ -4841,16 +4843,15 @@ void ImGui::MarkItemEdited(ImGuiID id)
     if (g.ActiveId == id || g.ActiveId == 0)
     {
         // FIXME: Can't we fully rely on LastItemData yet?
-        g.ActiveIdHasBeenEditedThisFrame = true;
-        g.ActiveIdHasBeenEditedBefore = true;
-        if (g.DeactivatedItemData.ID == id)
-            g.DeactivatedItemData.HasBeenEditedBefore = true;
+        g.AnyIdHasBeenEditedThisFrame = g.ActiveIdHasBeenEditedThisFrame = g.ActiveIdHasBeenEditedBefore = true;
     }
+    if (g.DeactivatedItemData.ID == id)
+        g.DeactivatedItemData.HasBeenEditedBefore = true;
 
     // We accept a MarkItemEdited() on drag and drop targets (see https://github.com/ocornut/imgui/issues/1875#issuecomment-978243343)
     // We accept 'ActiveIdPreviousFrame == id' for InputText() returning an edit after it has been taken ActiveId away (#4714)
     // FIXME: This assert is getting a bit meaningless over time. It helped detect some unusual use cases but eventually it is becoming an unnecessary restriction.
-    IM_ASSERT(g.DragDropActive || g.ActiveId == id || g.ActiveId == 0 || g.ActiveIdPreviousFrame == id || g.NavJustMovedToId || (g.CurrentMultiSelect != NULL && g.BoxSelectState.IsActive));
+    IM_ASSERT(g.DragDropActive || g.ActiveId == id || g.ActiveId == 0 || g.DeactivatedItemData.ID == id || g.ActiveIdPreviousFrame == id || g.NavJustMovedToId || (g.CurrentMultiSelect != NULL && g.BoxSelectState.IsActive));
 }
 
 bool ImGui::IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFlags flags)
@@ -5672,6 +5673,7 @@ void ImGui::NewFrame()
     g.LastActiveIdTimer += g.IO.DeltaTime;
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdIsAlive = 0;
+    g.AnyIdHasBeenEditedThisFrame = false;
     g.ActiveIdHasBeenEditedThisFrame = false;
     g.ActiveIdIsJustActivated = false;
     if (g.TempInputId != 0 && g.ActiveId != g.TempInputId)
@@ -5686,6 +5688,8 @@ void ImGui::NewFrame()
     if (g.DeactivatedItemData.ElapseFrame < g.FrameCount)
         g.DeactivatedItemData.ID = 0;
     g.DeactivatedItemData.IsAlive = false;
+    if (g.InputTextDeactivatedState.ElapseFrame < g.FrameCount)
+        g.InputTextDeactivatedState.ID = 0;
 
     // Record when we have been stationary as this state is preserved while over same item.
     // FIXME: The way this is expressed means user cannot alter HoverStationaryDelay during the frame to use varying values.
@@ -6354,6 +6358,7 @@ bool ImGui::IsItemDeactivated()
     return g.DeactivatedItemData.ID == g.LastItemData.ID && g.LastItemData.ID != 0 && g.DeactivatedItemData.ElapseFrame >= g.FrameCount;
 }
 
+// Since 1.92.9: consider using NoLiveEdit flags if all you need to that values are not written bo backing variable while typing.
 bool ImGui::IsItemDeactivatedAfterEdit()
 {
     ImGuiContext& g = *GImGui;
@@ -6432,7 +6437,7 @@ bool ImGui::IsItemEdited()
 void ImGui::SetNextItemAllowOverlap()
 {
     ImGuiContext& g = *GImGui;
-    g.NextItemData.ItemFlags |= ImGuiItemFlags_AllowOverlap;
+    g.NextItemData.ItemFlagsSet |= ImGuiItemFlags_AllowOverlap;
 }
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
@@ -11442,7 +11447,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
     g.LastItemData.ID = id;
     g.LastItemData.Rect = bb;
     g.LastItemData.NavRect = nav_bb_arg ? *nav_bb_arg : bb;
-    g.LastItemData.ItemFlags = g.CurrentItemFlags | g.NextItemData.ItemFlags | extra_flags;
+    g.LastItemData.ItemFlags = g.CurrentItemFlags | g.NextItemData.ItemFlagsSet | extra_flags;
     g.LastItemData.StatusFlags = ImGuiItemStatusFlags_None;
     // Note: we don't copy 'g.NextItemData.SelectionUserData' to an hypothetical g.LastItemData.SelectionUserData: since the former is not cleared.
 
@@ -11476,7 +11481,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
 
     // Lightweight clear of SetNextItemXXX data.
     g.NextItemData.HasFlags = ImGuiNextItemDataFlags_None;
-    g.NextItemData.ItemFlags = ImGuiItemFlags_None;
+    g.NextItemData.ItemFlagsSet = ImGuiItemFlags_None;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     if (id != 0)
@@ -11886,7 +11891,7 @@ void ImGui::BeginGroup()
     group_data.BackupActiveIdIsAlive = g.ActiveIdIsAlive;
     group_data.BackupHoveredIdIsAlive = g.HoveredId != 0;
     group_data.BackupIsSameLine = window->DC.IsSameLine;
-    group_data.BackupActiveIdHasBeenEditedThisFrame = g.ActiveIdHasBeenEditedThisFrame;
+    group_data.BackupAnyIdHasBeenEditedThisFrame = g.AnyIdHasBeenEditedThisFrame;
     group_data.BackupDeactivatedIdIsAlive = g.DeactivatedItemData.IsAlive;
     group_data.EmitItem = true;
 
@@ -11951,7 +11956,7 @@ void ImGui::EndGroup()
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredWindow;
 
     // Forward Edited flag
-    if (g.ActiveIdHasBeenEditedThisFrame && !group_data.BackupActiveIdHasBeenEditedThisFrame)
+    if (g.AnyIdHasBeenEditedThisFrame && !group_data.BackupAnyIdHasBeenEditedThisFrame)
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_Edited;
 
     // Forward Deactivated flag

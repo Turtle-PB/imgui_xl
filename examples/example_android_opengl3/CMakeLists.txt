@@ -37,5 +37,4 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
   EGL
   GLESv3
   log
-  sensor
 )

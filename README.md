@@ -85,18 +85,29 @@ This fork tracks upstream and contributes back via PRs:
 
 ## Go Bindings
 
-This fork includes Go (cgo) bindings for Dear ImGui:
+This fork includes Go (cgo) bindings for Dear ImGui — see **[bindings/go/README.md](bindings/go/README.md)** for full setup instructions (including the Windows MinGW gotchas).
 
 ```
 bindings/go/
   imgui_bridge.h/.cpp  — Thin C API bridge (extern "C")
   imgui.go             — Go cgo wrapper package
-  README.md            — Full documentation
+  README.md            — Full documentation + troubleshooting
 
 examples/example_golang/
   main.go              — Null-mode example
   Makefile             — Build targets
 ```
+
+**Quick start:**
+```bash
+# Requires: Go 1.21+, C++ compiler (MinGW-w64 gcc on Windows), CGO_ENABLED=1
+cd examples/example_golang
+go mod tidy
+CGO_ENABLED=1 go build -o imgui_go_example .
+./imgui_go_example
+```
+
+> **Windows users:** Go's cgo needs **MinGW-w64 gcc** (install via MSYS2: `pacman -S mingw-w64-x86_64-gcc`). LLVM clang fails with `-mthreads` errors. Verify with `go env CC CXX CGO_ENABLED`.
 
 ## Sync Status
 

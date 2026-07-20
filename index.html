@@ -97,9 +97,9 @@ a:hover{text-decoration:underline}
     <h1>imgui_xl</h1>
     <p class="tagline">Dear ImGui XL — Enhanced community fork with backend improvements, sensors, and live demos</p>
     <div class="hero-badges">
-      <span class="badge"><span class="dot green"></span> 3 PRs open upstream</span>
-      <span class="badge"><span class="dot orange"></span> Android + Vulkan fixes</span>
-      <span class="badge"><span class="dot purple"></span> Sensor + display support</span>
+      <span class="badge"><span class="dot green"></span> 3 PRs merged upstream</span>
+      <span class="badge"><span class="dot orange"></span> 3 PRs open</span>
+      <span class="badge"><span class="dot purple"></span> Audio + MIDI + GUI Builder</span>
       <span class="badge">MIT License</span>
     </div>
     <a href="#demos" style="font-size:2rem;color:var(--dim);text-decoration:none;animation:bounce 2s infinite">▼</a>
@@ -109,10 +109,10 @@ a:hover{text-decoration:underline}
 
 <!-- Stats -->
 <div class="stats">
-  <div class="stat"><div class="stat-value">3</div><div class="stat-label">Upstream PRs</div></div>
-  <div class="stat"><div class="stat-value">8</div><div class="stat-label">Sensor Types</div></div>
-  <div class="stat"><div class="stat-value">5</div><div class="stat-label">Visual Modes</div></div>
-  <div class="stat"><div class="stat-value">0</div><div class="stat-label">Binaries Added</div></div>
+  <div class="stat"><div class="stat-value">6</div><div class="stat-label">Upstream PRs</div></div>
+  <div class="stat"><div class="stat-value">3</div><div class="stat-label">Merged</div></div>
+  <div class="stat"><div class="stat-value">12</div><div class="stat-label">Widget Types</div></div>
+  <div class="stat"><div class="stat-value">2</div><div class="stat-label">Royalty-Free Tracks</div></div>
 </div>
 
 <!-- Demos -->
@@ -197,21 +197,39 @@ a:hover{text-decoration:underline}
   <h2 class="section-title">Upstream Contributions</h2>
   <div class="pr-list">
     <a href="https://github.com/ocornut/imgui/pull/9467" class="pr-item" style="text-decoration:none;color:inherit">
-      <div class="pr-status open"></div>
+      <div class="pr-status merged"></div>
       <span class="pr-number">#9467</span>
       <span class="pr-title">Android CI: Pin Gradle 9.4.1 via setup-gradle action for AGP 9.2.0</span>
       <span class="pr-link">→</span>
     </a>
-    <a href="https://github.com/ocornut/imgui/pull/9468" class="pr-item" style="text-decoration:none;color:inherit">
+    <a href="https://github.com/ocornut/imgui/pull/9473" class="pr-item" style="text-decoration:none;color:inherit">
+      <div class="pr-status merged"></div>
+      <span class="pr-number">#9473</span>
+      <span class="pr-title">OpenGL2/3: Backup and restore GL_UNPACK state in UpdateTexture()</span>
+      <span class="pr-link">→</span>
+    </a>
+    <a href="https://github.com/ocornut/imgui/pull/9474" class="pr-item" style="text-decoration:none;color:inherit">
+      <div class="pr-status merged"></div>
+      <span class="pr-number">#9474</span>
+      <span class="pr-title">Android: Clear mouse pos on touch release + SDL2: Restore StartTextInput</span>
+      <span class="pr-link">→</span>
+    </a>
+    <a href="https://github.com/ocornut/imgui/pull/9481" class="pr-item" style="text-decoration:none;color:inherit">
       <div class="pr-status open"></div>
-      <span class="pr-number">#9468</span>
-      <span class="pr-title">Vulkan: Fixed use-after-free in multi-viewport dynamic rendering</span>
+      <span class="pr-number">#9481</span>
+      <span class="pr-title">DX9/Allegro5/SDLRenderer2/3: Defer texture destruction until UnusedFrames > 0</span>
+      <span class="pr-link">→</span>
+    </a>
+    <a href="https://github.com/ocornut/imgui/pull/9483" class="pr-item" style="text-decoration:none;color:inherit">
+      <div class="pr-status open"></div>
+      <span class="pr-number">#9483</span>
+      <span class="pr-title">FreeType: Fix CBDT/COLR bitmap color emoji font loading (NotoColorEmoji, Twemoji)</span>
       <span class="pr-link">→</span>
     </a>
     <a href="https://github.com/ocornut/imgui/pull/9469" class="pr-item" style="text-decoration:none;color:inherit">
       <div class="pr-status open"></div>
       <span class="pr-number">#9469</span>
-      <span class="pr-title">Android: Move JNI keyboard/clipboard into backend, add sensors + display</span>
+      <span class="pr-title">Android: JNI keyboard/clipboard into backend + pressure sensitivity + NavBar insets</span>
       <span class="pr-link">→</span>
     </a>
   </div>
